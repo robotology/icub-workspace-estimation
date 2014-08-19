@@ -21,38 +21,49 @@
 #include <yarp/sig/Matrix.h>
 #include <yarp/math/Math.h>
 
+#include <iCub/iKin/iKinFwd.h>
+
 #include <iostream>
 #include <string>
 #include <vector>
+#include <stdarg.h>
 
 using namespace yarp;
 using namespace yarp::sig;
 using namespace yarp::math;
 using namespace yarp::os;
 
+using namespace iCub::iKin;
+
 using namespace std;
 
 class workspaceEvaluator: public RFModule 
 {
 private:
-
-    RpcClient        rpcClnt;
-    RpcServer        rpcSrvr;
-
     string name;
-    int verbosity;
-    int rate;
+    string src_mode;
+    double rate;
+    int    verbosity;
+    bool   isJobDone;
+
+    iKinChain *chain;
+    double granularity;
+    double ticks;
 
 public:
     workspaceEvaluator()
     {
+        isJobDone = 0;
     }
 
     bool configure(ResourceFinder &rf)
     {
-        name      = "workspaceEvaluator"; // name
-        verbosity = 0;                    // verbosity
-        rate      = 0.05;                 // rate
+        name        = "workspaceEvaluator"; // name
+        verbosity   = 0;                    // verbosity
+        rate        = 0.5;                  // rate
+        src_mode    = "test";               // src_mode
+        granularity = 0.01;
+        ticks       = 100;
 
         //******************************************************
         //********************** CONFIGS ***********************
@@ -61,35 +72,54 @@ public:
             if (rf.check("name"))
             {
                 name = rf.find("name").asString();
-                cout << "Module name set to "<<name<<endl;  
+                printMessage(0,"Module name set to %s\n",name.c_str());
             }
-            else cout << "Module name set to default, i.e. " << name << endl;
+            else printMessage(0,"Module name set to default, i.e. %s\n", name.c_str());
             setName(name.c_str());
-
 
         //******************** RATE ********************
             if (rf.check("rate"))
             {
                 rate = rf.find("rate").asInt()/1000;
-                cout << "workspaceEvaluator working at " << rate << " s.\n";
+                printMessage(0,"Module working at %gs\n", rate);
             }
-            else cout << "Could not find rate in the config file; using "
-                      << rate << " s as default.\n";
+            else printMessage(0,"Could not find rate in the config file; using %gs as default.\n",rate);
+
+        //******************** TICKS ********************
+            if (rf.check("ticks"))
+            {
+                ticks = rf.find("ticks").asDouble();
+                printMessage(0,"Each joint will be divided into %g ticks\n", ticks);
+            }
+            else printMessage(0,"Could not find ticks in the config file; using %gs as default.\n",ticks);
 
         //******************* VERBOSE ******************
             if (rf.check("verbosity"))
             {
                 verbosity = rf.find("verbosity").asInt();
-                cout << "workspaceEvaluator verbosity set to " << verbosity << endl;
+                printMessage(0,"Module verbosity set to %i\n",verbosity);
             }
-            else cout << "Could not find verbosity option in " <<
-                         "config file; using "<< verbosity <<" as default.\n";
+            else printMessage(0,"Could not find verbosity option in config file; using %i as default.\n",verbosity);
+
+        //************** SOURCE_MODE **************
+            if (rf.check("src_mode"))
+            {
+                if (rf.find("src_mode").asString() == "test")// || rf.find("src_mode").asString() == "DH" || rf.find("src_mode").asString() == "URDF")
+                {
+                    src_mode = rf.find("src_mode").asString();
+                    printMessage(0,"src_mode set to %s\n",src_mode.c_str());
+                }
+                else printMessage(0,"src_mode option found but not allowed; using %s as default.\n",src_mode.c_str());
+            }
+            else printMessage(0,"Could not find src_mode option in the config file; using %s as default.\n",src_mode.c_str());
+
+            configureChain();
 
         return true;
     }
 
     bool close()
-    {
+    {   
         return true;
     }
 
@@ -100,8 +130,102 @@ public:
 
     bool updateModule()
     {
+        if (!isJobDone)
+        {
+            exploreWorkspace(7);
+            saveWorkspace();
+            isJobDone = 1;
+        }
+        else
+            printMessage(0,"Finished\n");
         return true;
     }
+
+    /**
+     * Explores the workspace by recursively span all the joints and store the position into a suitable variable.
+     * @param  jnt the link from which the exploration starts (usually 0)
+     * @return     true/false if success/failure
+     */
+    bool exploreWorkspace(const int &jnt=0)
+    {
+        double min = (*chain)[jnt].getMin();
+        double max = (*chain)[jnt].getMax();
+        double increment = (max - min) / ticks;
+        printMessage(0,"Analyzing link #%i : min %g\tmax %g\tincrement %g\n",jnt,min,max,increment);
+
+        chain->setAng(jnt,min);
+        printMessage(1,"Link #%i ang set to %g\n",jnt,chain->getAng(jnt));
+
+        while (chain->getAng(jnt) < max)
+        {
+            if (jnt+1 < chain->getN())
+            {
+                exploreWorkspace(jnt+1);
+            }
+            else
+            {
+                printMessage(2,"Links are finished!\n");
+            }
+            Matrix H   = chain->getH();
+            Vector pos = H.getCol(3).subVector(0,2);
+            chain->setAng(jnt,chain->getAng(jnt)+increment);
+            printMessage(1,"Link #%i ang set to %g\n",jnt,chain->getAng(jnt));
+        }
+
+        return true;
+    }
+
+    bool saveWorkspace()
+    {
+        return true;
+    }
+
+    /**
+     * Configures the chain according to the src_mode. It can be either a test chain (a classical iCubArm left),
+     * a DH file, or an URDF file
+     * @return true/false if success/failure
+     */
+    bool configureChain()
+    {
+        if (src_mode == "test")
+        {
+            iCubArm *arm = new iCubArm("left");
+            chain = arm->asChain();
+            return true;
+        }
+        else if (src_mode == "DH")
+        {
+            
+        }
+        else if (src_mode == "URDF")
+        {
+            
+        }
+
+        return false;
+    }
+    /**
+    * Prints a message according to the verbosity level:
+    * @param l is the level of verbosity: if level > verbosity, something is printed
+    * @param f is the text. Please use c standard (like printf)
+    **/
+    int printMessage(const int l, const char *f, ...) const
+    {
+        if (verbosity>=l)
+        {
+            fprintf(stdout,"*** %s: ",name.c_str());
+
+            va_list ap;
+            va_start(ap,f);
+            int ret=vfprintf(stdout,f,ap);
+            va_end(ap);
+
+            return ret;
+        }
+        else
+            return -1;
+    }
+
 };
 
 /**
@@ -122,7 +246,9 @@ int main(int argc, char * argv[])
         cout << "   --from      from:  the name of the .ini file (default workspaceEvaluator.ini)." << endl;
         cout << "   --name      name:  the name of the module (default workspaceEvaluator)." << endl;
         cout << "   --verbosity int:   verbosity level (default 0)." << endl;
-        cout << "   --rate      int:   the period used by the module. Default 50ms." << endl;
+        cout << "   --rate      int:   the period used by the module. Default 500ms." << endl;
+        cout << "   --ticks     int:   the number of ticks that span each joint. Default 100." << endl;
+        cout << "   --src_mode  mode:  source to use finding the chain (either test, DH, or URDF; default test)." << endl;
         cout << endl;
         return 0;
     }
