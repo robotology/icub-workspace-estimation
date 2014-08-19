@@ -48,11 +48,14 @@ private:
 
     iKinChain *chain;
     double granularity;
-    double ticks;
+    double increment;
+
+    Vector foo;
 
 public:
     workspaceEvaluator()
     {
+        foo.resize(3,0.0);
         isJobDone = 0;
     }
 
@@ -63,7 +66,7 @@ public:
         rate        = 0.5;                  // rate
         src_mode    = "test";               // src_mode
         granularity = 0.01;
-        ticks       = 100;
+        increment   = CTRL_DEG2RAD*1;
 
         //******************************************************
         //********************** CONFIGS ***********************
@@ -86,12 +89,12 @@ public:
             else printMessage(0,"Could not find rate in the config file; using %gs as default.\n",rate);
 
         //******************** TICKS ********************
-            if (rf.check("ticks"))
+            if (rf.check("increment"))
             {
-                ticks = rf.find("ticks").asDouble();
-                printMessage(0,"Each joint will be divided into %g ticks\n", ticks);
+                increment = rf.find("increment").asDouble();
+                printMessage(0,"Each joint will be divided into %g increment\n", increment);
             }
-            else printMessage(0,"Could not find ticks in the config file; using %gs as default.\n",ticks);
+            else printMessage(0,"Could not find increment in the config file; using %g as default.\n",increment);
 
         //******************* VERBOSE ******************
             if (rf.check("verbosity"))
@@ -132,7 +135,7 @@ public:
     {
         if (!isJobDone)
         {
-            exploreWorkspace(7);
+            exploreWorkspace(9);
             saveWorkspace();
             isJobDone = 1;
         }
@@ -142,19 +145,26 @@ public:
     }
 
     /**
-     * Explores the workspace by recursively span all the joints and store the position into a suitable variable.
+     * Explores the workspace by iteratively span all the joints and store the position into a suitable variable.
      * @param  jnt the link from which the exploration starts (usually 0)
      * @return     true/false if success/failure
      */
     bool exploreWorkspace(const int &jnt=0)
     {
-        double min = (*chain)[jnt].getMin();
-        double max = (*chain)[jnt].getMax();
-        double increment = (max - min) / ticks;
-        printMessage(0,"Analyzing link #%i : min %g\tmax %g\tincrement %g\n",jnt,min,max,increment);
+        double min  = (*chain)[jnt].getMin();
+        double max  = (*chain)[jnt].getMax();
+
+        // The spaces are there in order to make some order into the printouts (otherwise its a mess)
+        string spaces="";
+        for (int i = 0; i < jnt; i++)
+        {
+            spaces += "  ";
+        }
+
+        printMessage(0,(spaces+"Analyzing link #%i : min %g\tmax %g\n").c_str(),jnt,min,max);
 
         chain->setAng(jnt,min);
-        printMessage(1,"Link #%i ang set to %g\n",jnt,chain->getAng(jnt));
+        printMessage(1,(spaces+"Link #%i ang set to %g\n").c_str(),jnt,chain->getAng(jnt));
 
         while (chain->getAng(jnt) < max)
         {
@@ -166,12 +176,22 @@ public:
             {
                 printMessage(2,"Links are finished!\n");
             }
+            double timeStart = yarp::os::Time::now();
             Matrix H   = chain->getH();
             Vector pos = H.getCol(3).subVector(0,2);
             chain->setAng(jnt,chain->getAng(jnt)+increment);
-            printMessage(1,"Link #%i ang set to %g\n",jnt,chain->getAng(jnt));
+            storePosition(pos);
+            double timeEnd = yarp::os::Time::now();
+
+            printMessage(0,"Elapsed time: %g\n",timeEnd-timeStart);
         }
 
+        return true;
+    }
+
+    bool storePosition(const Vector &pos)
+    {
+        foo = pos;
         return true;
     }
 
@@ -247,7 +267,7 @@ int main(int argc, char * argv[])
         cout << "   --name      name:  the name of the module (default workspaceEvaluator)." << endl;
         cout << "   --verbosity int:   verbosity level (default 0)." << endl;
         cout << "   --rate      int:   the period used by the module. Default 500ms." << endl;
-        cout << "   --ticks     int:   the number of ticks that span each joint. Default 100." << endl;
+        cout << "   --increment     int:   the number of increment that span each joint. Default 10." << endl;
         cout << "   --src_mode  mode:  source to use finding the chain (either test, DH, or URDF; default test)." << endl;
         cout << endl;
         return 0;
