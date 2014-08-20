@@ -56,6 +56,7 @@ private:
     iKinIpOptMin *slv;
 
     vector<Vector> poss2Expl;
+    vector<double> reachability;
 
     Vector foo;
 
@@ -87,6 +88,7 @@ public:
                     p(1)=j;
                     p(2)=k;
                     poss2Expl.push_back(p);
+                    reachability.push_back(0.0);
                 }
             }
         }
