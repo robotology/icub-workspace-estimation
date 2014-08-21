@@ -8,6 +8,7 @@
 
 %% Initialize variables.
 filename = '/home/alecive/.local/share/yarp/contexts/iCubWorkspace/output.ini';
+filename = '../app/conf/output.ini';
 delimiter = ' ';
 
 %% Format string for each line of text:
@@ -29,20 +30,29 @@ data = [dataArray{1:end-1}];
 %% Clear temporary variables
 clearvars filename delimiter formatSpec fileID dataArray ans;
 
-figure; hold on; grid on;
-
-for i=1:1
-    if data(i,4) ~= 0
-        plot3(data(i,1),data(i,2),data(i,3));%,'Markersize',4,'Markercolor',data(i,4));
-    end
-end
+figure;
+hold on; grid on; view(3);
 
 xlabel('x')
 ylabel('y')
 zlabel('z')
 
 axis([-0.5,0.2,-0.5,0.5,-0.2,0.6]);
+axis equal;
 
+rP=find(data(:,4)~=0);
+reachedPts = data(rP,:);
+x = reachedPts(:,1);
+y = reachedPts(:,2);
+z = reachedPts(:,3);
+c = reachedPts(:,4);
 
-scatter3(data(:,1),data(:,2),data(:,3),24,data(:,4),'.');
-view(3)
+% Plot only the surface of the points under evaluation.
+K = convhull(x,y,z);
+trisurf(K,x,y,z);
+
+% scatter3(reachedPts(:,1),reachedPts(:,2),reachedPts(:,3),12,reachedPts(:,4),'.');
+
+drawRefFrame(eye(4),0.6);
+
+clear i;
