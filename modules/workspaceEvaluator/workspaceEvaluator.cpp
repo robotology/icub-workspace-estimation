@@ -22,7 +22,7 @@
 #include <yarp/math/Math.h>
 
 #include <iCub/iKin/iKinFwd.h>
- #include <iCub/iKin/iKinIpOpt.h>
+#include <iCub/iKin/iKinIpOpt.h>
 
 #include <iostream>
 #include <string>
@@ -41,8 +41,8 @@ using namespace std;
 class workspaceEvaluator: public RFModule 
 {
 private:
+    ResourceFinder rf;
     string name;
-    string src_mode;
     double rate;
     int    verbosity;
     bool   isJobDone;
@@ -50,8 +50,14 @@ private:
     double translationalTol;
     double orientationalTol;
 
+    string src_mode;
+    string DH_file;
+    string URDF_file;
+
     Matrix sLims;
 
+    iCubArm      *arm;       // This is used only if src_mode=="test"
+    iKinLimb     *limb;      // This is used if src_mode=="DH" || src_mode=="URDF"
     iKinChain    *chain;
     iKinIpOptMin *slv;
 
@@ -65,45 +71,25 @@ public:
     {
         foo.resize(3,0.0);
         isJobDone = 0;
+        name             = "workspaceEvaluator"; // name
+        verbosity        = 0;                    // verbosity
+        rate             = 0.5;                  // rate
+        granP            = 0.01;                 // spatial granularity
+        translationalTol = 5e-3;                 // translational tolerance
+        orientationalTol = 1e-8;                 // orientational tolerance
+        src_mode         = "test";               // src_mode
+        DH_file          = "DH.ini";
+        URDF_file        = "URDF.xml";
 
         // These are the limits of the exploration of the workspace, defined as a 3x2 matrix
         // sLims = [minX maxX; minY maxY; minZ maxZ]
         sLims.resize(3,2);
-        sLims(0,0) = -0.4;
-        sLims(0,1) =  0.1;
-        sLims(1,0) = -0.4;
-        sLims(1,1) =  0.4;
-        sLims(2,0) = -0.1;
-        sLims(2,1) =  0.5;
-
-        // Populate the vector of positions in order for it to be used later
-        Vector p(3,0.0);
-        for (double i = sLims(0,0); i < sLims(0,1); i=i+granP)
-        {
-            for (double j = sLims(1,0); j < sLims(1,1); j=j+granP)
-            {
-                for (double k = sLims(2,0); k < sLims(2,1); k=k+granP)
-                {
-                    p(0)=i;
-                    p(1)=j;
-                    p(2)=k;
-                    poss2Expl.push_back(p);
-                    reachability.push_back(0.0);
-                }
-            }
-        }
+        sLims.zero();
     }
 
-    bool configure(ResourceFinder &rf)
+    bool configure(ResourceFinder &_rf)
     {
-        name        = "workspaceEvaluator"; // name
-        verbosity   = 0;                    // verbosity
-        rate        = 0.5;                  // rate
-        src_mode    = "test";               // src_mode
-        granP       = 0.01;                 // spatial granularity
-        translationalTol = 5e-3;
-        orientationalTol = 1e-8;
-
+        rf=_rf;
         //******************************************************
         //********************** CONFIGS ***********************
 
@@ -124,13 +110,29 @@ public:
             }
             else printMessage(0,"Could not find rate in the config file; using %gs as default.\n",rate);
 
-        //******************** TICKS ********************
+        //************** SPATIAL GRANULARITY ********************
             if (rf.check("granP"))
             {
                 granP = rf.find("granP").asDouble();
-                printMessage(0,"Each joint will be divided into %g granP\n", granP);
+                printMessage(0,"Granularity will be %g m\n", granP);
             }
             else printMessage(0,"Could not find granP in the config file; using %g as default.\n",granP);
+
+        //************** TRANSLATIONAL TOLERANCE ********************
+            if (rf.check("translationalTol"))
+            {
+                translationalTol = rf.find("translationalTol").asDouble();
+                printMessage(0,"Each joint will be divided into %g translationalTol\n", translationalTol);
+            }
+            else printMessage(0,"Could not find translationalTol in the config file; using %g as default.\n",translationalTol);
+
+        //************** ORIENTATIONAL TOLERANCE ********************
+            if (rf.check("orientationalTol"))
+            {
+                orientationalTol = rf.find("orientationalTol").asDouble();
+                printMessage(0,"Each joint will be divided into %g orientationalTol\n", orientationalTol);
+            }
+            else printMessage(0,"Could not find orientationalTol in the config file; using %g as default.\n",orientationalTol);
 
         //******************* VERBOSE ******************
             if (rf.check("verbosity"))
@@ -143,7 +145,7 @@ public:
         //************** SOURCE_MODE **************
             if (rf.check("src_mode"))
             {
-                if (rf.find("src_mode").asString() == "test")// || rf.find("src_mode").asString() == "DH" || rf.find("src_mode").asString() == "URDF")
+                if (rf.find("src_mode").asString() == "test" || rf.find("src_mode").asString() == "DH")// || rf.find("src_mode").asString() == "URDF")
                 {
                     src_mode = rf.find("src_mode").asString();
                     printMessage(0,"src_mode set to %s\n",src_mode.c_str());
@@ -152,7 +154,123 @@ public:
             }
             else printMessage(0,"Could not find src_mode option in the config file; using %s as default.\n",src_mode.c_str());
 
-            configureInvKin();
+        //************** DH_FILE **************
+            if (src_mode == "DH")
+            {        
+                if (rf.check("DH_file"))
+                {
+                    DH_file = rf.find("DH_file").asString();
+                    printMessage(0,"DH_file set to %s\n",DH_file.c_str());
+                }
+                else printMessage(0,"Could not find DH_file option in the config file; using %s as default.\n",DH_file.c_str());
+            }
+
+        //************** URDF_FILE **************
+            if (src_mode == "URDF")
+            {        
+                if (rf.check("URDF_file"))
+                {
+                    URDF_file = rf.find("URDF_file").asString();
+                    printMessage(0,"URDF_file set to %s\n",URDF_file.c_str());
+                }
+                else printMessage(0,"Could not find URDF_file option in the config file; using %s as default.\n",URDF_file.c_str());
+            }
+
+        if(!initVariables())      return false;
+        if(!configureInvKin())    return false;
+
+        return true;
+    }
+
+
+    bool initVariables()
+    {
+        //*********** WORKSPACE LIMITS ************
+            Bottle &wl = rf.findGroup("WORKSPACE_LIMITS");
+
+            if (!wl.isNull())
+            {
+                printMessage(0,"Found custom workspace limits.\n");
+                Bottle *wlX = wl.find("limX").asList();
+                Bottle *wlY = wl.find("limY").asList();
+                Bottle *wlZ = wl.find("limZ").asList();
+
+                sLims(0,0) = wlX->get(0).asDouble();    sLims(0,1) = wlX->get(1).asDouble();
+                sLims(1,0) = wlY->get(0).asDouble();    sLims(1,1) = wlY->get(1).asDouble();
+                sLims(2,0) = wlZ->get(0).asDouble();    sLims(2,1) = wlZ->get(1).asDouble();
+            }
+            else
+            {
+                sLims(0,0) = -0.4;                sLims(0,1) =  0.1;
+                sLims(1,0) = -0.4;                sLims(1,1) =  0.4;
+                sLims(2,0) = -0.1;                sLims(2,1) =  0.5;
+            }
+            printMessage(0,"Workspace Limits set to: \n%s\n",sLims.toString().c_str());
+
+        // Populate the vector of positions in order for it to be used later
+        printMessage(0,"Populating the vectors..\n");
+        Vector p(3,0.0);
+        for (double i = sLims(0,0); i <= sLims(0,1); i=i+granP)
+        {
+            for (double j = sLims(1,0); j <= sLims(1,1); j=j+granP)
+            {
+                for (double k = sLims(2,0); k <= sLims(2,1); k=k+granP)
+                {
+                    p(0)=i;
+                    p(1)=j;
+                    p(2)=k;
+                    printMessage(3,"poss2Expl: %s\n",p.toString().c_str());
+                    poss2Expl.push_back(p);
+                    reachability.push_back(0.0);
+                }
+            }
+        }
+        printMessage(0,"Vectors have been populated!\n");
+
+        return true;
+    }
+
+    /**
+     * Configures the chain according to the src_mode. It can be either a test chain (a classical iCubArm left),
+     * a DH file, or an URDF file. After this, it instantiates a proper iKinIpOptMin solver.
+     * @return true/false if success/failure
+     */
+    bool configureInvKin()
+    {
+        if (src_mode == "test")
+        {
+            arm   = new iCubArm("left");
+            chain = arm->asChain();
+
+            // Relase torso joints since we want to explore as much workspace as possible
+            chain->releaseLink(0);
+            chain->releaseLink(1);
+            chain->releaseLink(2);
+        }
+        else if (src_mode == "DH")
+        {
+            string file = rf.findFile(DH_file.c_str());
+            printMessage(0,"DH_file found: %s\n",file.c_str());
+
+            Property linksOptions;
+            linksOptions.fromConfigFile(file.c_str());
+            limb=new iKinLimb(linksOptions);
+            chain = limb->asChain();
+        }
+        else if (src_mode == "URDF")
+        {
+            return false;
+        }
+        printMessage(1,"The chain has been successfully instantiated.\n");
+
+        // instantiate a IPOPT solver for inverse kinematic
+        // for both translational and rotational part
+        slv = new iKinIpOptMin(*chain,IKINCTRL_POSE_FULL,1e-3,100);  
+
+        // we have a dedicated tolerance for the translational part
+        // which is by default equal to 1e-6;
+        // note that the tolerance is applied to the squared norm
+        slv->setTranslationalTol(1e-8);
 
         return true;
     }
@@ -164,6 +282,17 @@ public:
             delete slv;
             slv = 0;
         }
+        if (arm)
+        {
+            delete arm;
+            arm=0;
+        }
+        if (limb)
+        {
+            delete limb;
+            limb=0;
+        }
+
         return true;
     }
 
@@ -183,7 +312,7 @@ public:
         else
         {
             printMessage(0,"Finished\n");
-            close();
+            stopModule();
         }
         return true;
     }
@@ -242,50 +371,6 @@ public:
     }
 
     /**
-     * Configures the chain according to the src_mode. It can be either a test chain (a classical iCubArm left),
-     * a DH file, or an URDF file. After this, it instantiates a proper iKinIpOptMin solver.
-     * @return true/false if success/failure
-     */
-    bool configureInvKin()
-    {
-        if (src_mode == "test")
-        {
-            printf("0\n");
-            iCubArm *arm = new iCubArm("left");
-            chain = arm->asChain();
-
-            // Relase torso joints since we want to explore as much workspace as possible
-            chain->releaseLink(0);
-            chain->releaseLink(1);
-            chain->releaseLink(2);
-
-            // TODO: handle the deletion of the icubArm!
-            // delete arm;
-            // arm = 0;
-        }
-        else if (src_mode == "DH")
-        {
-            return false;
-        }
-        else if (src_mode == "URDF")
-        {
-            return false;
-        }
-        printf("asofji\n");
-        // instantiate a IPOPT solver for inverse kinematic
-        // for both translational and rotational part
-        slv = new iKinIpOptMin(*chain,IKINCTRL_POSE_FULL,1e-3,100);  
-
-        // we have a dedicated tolerance for the translational part
-        // which is by default equal to 1e-6;
-        // note that the tolerance is applied to the squared norm
-        slv->setTranslationalTol(1e-8);
-        printf("asdac\n");
-
-
-        return true;
-    }
-    /**
     * Prints a message according to the verbosity level:
     * @param l is the level of verbosity: if level > verbosity, something is printed
     * @param f is the text. Please use c standard (like printf)
@@ -322,15 +407,25 @@ int main(int argc, char * argv[])
 
     if (moduleRF.check("help"))
     {    
-        cout << endl << "Options:" << endl;
-        cout << "   --context   path:   where to find the called resource (default periPersonalSpace)." << endl;
-        cout << "   --from      from:   the name of the .ini file (default workspaceEvaluator.ini)." << endl;
-        cout << "   --name      name:   the name of the module (default workspaceEvaluator)." << endl;
-        cout << "   --verbosity int:    verbosity level (default 0)." << endl;
-        cout << "   --rate      int:    the period used by the module. Default 500ms." << endl;
-        cout << "   --granP     double: the spatial granularity of the workspace exploration. Default 1cm." << endl;
-        cout << "   --src_mode  mode:   source to use finding the chain (either test, DH, or URDF; default test)." << endl;
-        cout << endl;
+        cout<<endl<<"Options:"<<endl;
+        cout<<"   --context          path:   where to find the called resource (default periPersonalSpace)."<<endl;
+        cout<<"   --from             from:   the name of the .ini file (default workspaceEvaluator.ini)."<<endl;
+        cout<<"   --name             name:   the name of the module (default workspaceEvaluator)."<<endl;
+        cout<<"   --verbosity        int:    verbosity level (default 0)."<<endl;
+        cout<<"   --rate             int:    the period used by the module. Default 500ms."<<endl;
+        cout<<"   --granP            double: the spatial granularity of the workspace exploration. Default 1cm."<<endl;
+        cout<<"   --translationalTol double: the translational tolerance used to assess if a point in the workspace has"<<endl;
+        cout<<"                              been reached. Default 5e-3m"<<endl;
+        cout<<"   --orientationalTol double: the orientational tolerance used to assess if a point in the workspace has"<<endl;
+        cout<<"                              been reached. Default "<<endl;
+        cout<<"   --src_mode         mode:   source to use finding the chain (either test, DH, or URDF; default test)."<<endl;
+        cout<<"                              NOTE:"<<endl;
+        cout<<"                              \'test\' creates a right iCubArm and tests the software on it;"<<endl;
+        cout<<"                              \'DH\'   needs a proper DH.ini with the specification of the chain in DH convention;"<<endl;
+        cout<<"                              \'URDF\' needs a proper URDF file."<<endl;
+        cout<<"   --DH_file          string: DH.ini file to be used alongside the \'DH\' src_mode."<<endl;
+        cout<<"   --URDF_file        string: URDF   file to be used alongside the \'URDF\' src_mode."<<endl;
+        cout<<endl;
         return 0;
     }
 
