@@ -25,6 +25,8 @@
 #include <iCub/iKin/iKinIpOpt.h>
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <stdarg.h>
@@ -51,6 +53,8 @@ private:
     double orientationalTol;
 
     string src_mode;
+    string homePath;
+    string outputFile;
     string DH_file;
     string URDF_file;
 
@@ -64,12 +68,12 @@ private:
     vector<Vector> poss2Expl;
     vector<double> reachability;
 
-    Vector foo;
-
 public:
     workspaceEvaluator()
     {
-        foo.resize(3,0.0);
+        arm       = 0;
+        limb      = 0;
+        slv       = 0;
         isJobDone = 0;
         name             = "workspaceEvaluator"; // name
         verbosity        = 0;                    // verbosity
@@ -93,7 +97,7 @@ public:
         //******************************************************
         //********************** CONFIGS ***********************
 
-        //********************* NAME *******************
+        //************************ NAME ************************
             if (rf.check("name"))
             {
                 name = rf.find("name").asString();
@@ -102,7 +106,7 @@ public:
             else printMessage(0,"Module name set to default, i.e. %s\n", name.c_str());
             setName(name.c_str());
 
-        //******************** RATE ********************
+        //************************ RATE ************************
             if (rf.check("rate"))
             {
                 rate = rf.find("rate").asInt()/1000;
@@ -110,7 +114,7 @@ public:
             }
             else printMessage(0,"Could not find rate in the config file; using %gs as default.\n",rate);
 
-        //************** SPATIAL GRANULARITY ********************
+        //**************** SPATIAL GRANULARITY *****************
             if (rf.check("granP"))
             {
                 granP = rf.find("granP").asDouble();
@@ -118,7 +122,7 @@ public:
             }
             else printMessage(0,"Could not find granP in the config file; using %g as default.\n",granP);
 
-        //************** TRANSLATIONAL TOLERANCE ********************
+        //************** TRANSLATIONAL TOLERANCE ***************
             if (rf.check("translationalTol"))
             {
                 translationalTol = rf.find("translationalTol").asDouble();
@@ -126,7 +130,7 @@ public:
             }
             else printMessage(0,"Could not find translationalTol in the config file; using %g as default.\n",translationalTol);
 
-        //************** ORIENTATIONAL TOLERANCE ********************
+        //************** ORIENTATIONAL TOLERANCE ***************
             if (rf.check("orientationalTol"))
             {
                 orientationalTol = rf.find("orientationalTol").asDouble();
@@ -134,7 +138,7 @@ public:
             }
             else printMessage(0,"Could not find orientationalTol in the config file; using %g as default.\n",orientationalTol);
 
-        //******************* VERBOSE ******************
+        //********************** VERBOSE ***********************
             if (rf.check("verbosity"))
             {
                 verbosity = rf.find("verbosity").asInt();
@@ -142,7 +146,7 @@ public:
             }
             else printMessage(0,"Could not find verbosity option in config file; using %i as default.\n",verbosity);
 
-        //************** SOURCE_MODE **************
+        //******************** SOURCE_MODE *********************
             if (rf.check("src_mode"))
             {
                 if (rf.find("src_mode").asString() == "test" || rf.find("src_mode").asString() == "DH")// || rf.find("src_mode").asString() == "URDF")
@@ -154,7 +158,7 @@ public:
             }
             else printMessage(0,"Could not find src_mode option in the config file; using %s as default.\n",src_mode.c_str());
 
-        //************** DH_FILE **************
+        //********************** DH_FILE ***********************
             if (src_mode == "DH")
             {        
                 if (rf.check("DH_file"))
@@ -165,7 +169,7 @@ public:
                 else printMessage(0,"Could not find DH_file option in the config file; using %s as default.\n",DH_file.c_str());
             }
 
-        //************** URDF_FILE **************
+        //********************* URDF_FILE **********************
             if (src_mode == "URDF")
             {        
                 if (rf.check("URDF_file"))
@@ -176,13 +180,22 @@ public:
                 else printMessage(0,"Could not find URDF_file option in the config file; using %s as default.\n",URDF_file.c_str());
             }
 
+        //******************** OUTPUT_FILE *********************
+            homePath = rf.getHomeContextPath().c_str();
+            homePath = homePath+"/";
+            outputFile = rf.check("outputFile", Value("output.ini")).asString().c_str();
+            printMessage(0,"Storing file set to: %s\n", (homePath+outputFile).c_str());
+
         if(!initVariables())      return false;
         if(!configureInvKin())    return false;
 
         return true;
     }
 
-
+    /**
+     * Initializes some variables, such as the workspace limits and the vectors that store the workspace
+     * @return true/false if success/failure
+     */
     bool initVariables()
     {
         //*********** WORKSPACE LIMITS ************
@@ -275,43 +288,20 @@ public:
         return true;
     }
 
-    bool close()
-    {   
-        if (slv)
-        {
-            delete slv;
-            slv = 0;
-        }
-        if (arm)
-        {
-            delete arm;
-            arm=0;
-        }
-        if (limb)
-        {
-            delete limb;
-            limb=0;
-        }
-
-        return true;
-    }
-
-    double getPeriod()
-    {
-        return rate;
-    }
-
     bool updateModule()
     {
         if (!isJobDone)
         {
+            printMessage(0,"STARTING EXPLORATION...\n");
             exploreWorkspace();
+            printMessage(1,"Exploration finished. Number of points explored: %i\n",poss2Expl.size());
+            printMessage(0,"SAVING EXPLORATION...\n");
             saveWorkspace();
             isJobDone = 1;
         }
         else
         {
-            printMessage(0,"Finished\n");
+            printMessage(0,"FINISHED.\n");
             stopModule();
         }
         return true;
@@ -348,6 +338,7 @@ public:
 
             if (norm(pos2Expl-posObt)<translationalTol)// && norm(ori2Expl-oriObt)<orientationalTol)
             {
+                reachability[i] += 1.0;
                 printMessage(1,"Pose %s has been successfully reached!\n", pos2Expl.toString().c_str());
             }
             else
@@ -359,14 +350,27 @@ public:
         return true;
     }
 
-    bool storePosition(const Vector &pos)
-    {
-        foo = pos;
-        return true;
-    }
-
     bool saveWorkspace()
     {
+        Bottle data;
+        ofstream myfile;
+        string fnm=homePath+outputFile;
+        myfile.open(fnm.c_str(),ios::trunc);
+
+        if (myfile.is_open())
+        {
+            for (int i = 0; i < poss2Expl.size(); i++)
+            {
+                data.clear();
+                data.addDouble(poss2Expl[i](0));
+                data.addDouble(poss2Expl[i](1));
+                data.addDouble(poss2Expl[i](2));
+                data.addDouble(reachability[i]);
+                myfile << data.toString() << endl;
+            }
+        }
+        myfile.close();
+
         return true;
     }
 
@@ -392,6 +396,31 @@ public:
             return -1;
     }
 
+    bool close()
+    {   
+        if (slv)
+        {
+            delete slv;
+            slv = 0;
+        }
+        if (arm)
+        {
+            delete arm;
+            arm=0;
+        }
+        if (limb)
+        {
+            delete limb;
+            limb=0;
+        }
+
+        return true;
+    }
+
+    double getPeriod()
+    {
+        return rate;
+    }
 };
 
 /**
