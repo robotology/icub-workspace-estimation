@@ -5,19 +5,18 @@
 cmake_minimum_required(VERSION 2.8)
 project(workspaceEvaluator)
 
-file(GLOB source *.cpp)
-file(GLOB header *.h)
-
 include_directories(${YARP_INCLUDE_DIRS})
 include_directories(${ICUB_INCLUDE_DIRS})
+
+file(GLOB source *.cpp)
+file(GLOB header *.h)
 
 source_group("Source Files" FILES ${source})
 source_group("Header Files" FILES ${header})
 
-
 add_executable(workspaceEvaluator ${source} ${header} )
 
-target_link_libraries(workspaceEvaluator ${YARP_LIBRARIES} ${ICUB_LIBRARIES})
+target_link_libraries(workspaceEvaluator ${YARP_LIBRARIES} ctrlLib ${ICUB_LIBRARIES})
 
 install(TARGETS workspaceEvaluator DESTINATION bin)
 
