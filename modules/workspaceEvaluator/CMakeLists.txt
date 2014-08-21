@@ -16,7 +16,7 @@ source_group("Header Files" FILES ${header})
 
 add_executable(workspaceEvaluator ${source} ${header} )
 
-target_link_libraries(workspaceEvaluator ${YARP_LIBRARIES} ctrlLib ${ICUB_LIBRARIES})
+target_link_libraries(workspaceEvaluator ${YARP_LIBRARIES})
 
 install(TARGETS workspaceEvaluator DESTINATION bin)
 
