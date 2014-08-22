@@ -32,6 +32,8 @@
 #include <vector>
 #include <stdarg.h>
 
+#include "workspaceEvThread.h"
+
 using namespace yarp;
 using namespace yarp::sig;
 using namespace yarp::math;
@@ -45,6 +47,8 @@ using namespace std;
 class workspaceEvaluator: public RFModule 
 {
 private:
+    vector<workspaceEvThread*>wsEvThreads;
+    workspaceEvThread *wSET;
     ResourceFinder rf;
     string name;
     double rate;
@@ -60,23 +64,21 @@ private:
     string DH_file;
     string URDF_file;
 
-    Matrix sLims;
+    Matrix wsLims;
 
     iCubArm      *arm;       // This is used only if src_mode=="test"
     iKinLimb     *limb;      // This is used if src_mode=="DH" || src_mode=="URDF"
     iKinChain    *chain;
-    iKinIpOptMin *slv;
 
     vector<Vector> poss2Expl;
-    vector<double> reachability;
     vector<Vector> oris2Expl;
+    vector<double> reachability;
 
 public:
     workspaceEvaluator()
     {
         arm       = 0;
         limb      = 0;
-        slv       = 0;
         isJobDone = 0;
         name             = "workspaceEvaluator"; // name
         verbosity        = 0;                    // verbosity
@@ -89,9 +91,9 @@ public:
         URDF_file        = "URDF.xml";
 
         // These are the limits of the exploration of the workspace, defined as a 3x2 matrix
-        // sLims = [minX maxX; minY maxY; minZ maxZ]
-        sLims.resize(3,2);
-        sLims.zero();
+        // wsLims = [minX maxX; minY maxY; minZ maxZ]
+        wsLims.resize(3,2);
+        wsLims.zero();
     }
 
     bool configure(ResourceFinder &_rf)
@@ -192,6 +194,16 @@ public:
         if(!initVariables())      return false;
         if(!configureInvKin())    return false;
 
+        //********************* THREAD(s) **********************
+            for (int i = 0; i < 1; i)
+            {
+                wsEvThreads.push_back(new workspaceEvThread(rate,verbosity,name,translationalTol,
+                                                            orientationalTol,*chain,poss2Expl,
+                                                            oris2Expl,(homePath+outputFile)));
+
+                wsEvThreads.back()->start();
+            }
+            printMessage(0,"workspaceEvThreads have been istantiated...\n");
         return true;
     }
 
@@ -211,27 +223,27 @@ public:
                 Bottle *wlY = wl.find("limY").asList();
                 Bottle *wlZ = wl.find("limZ").asList();
 
-                sLims(0,0) = wlX->get(0).asDouble();    sLims(0,1) = wlX->get(1).asDouble();
-                sLims(1,0) = wlY->get(0).asDouble();    sLims(1,1) = wlY->get(1).asDouble();
-                sLims(2,0) = wlZ->get(0).asDouble();    sLims(2,1) = wlZ->get(1).asDouble();
+                wsLims(0,0) = wlX->get(0).asDouble();    wsLims(0,1) = wlX->get(1).asDouble();
+                wsLims(1,0) = wlY->get(0).asDouble();    wsLims(1,1) = wlY->get(1).asDouble();
+                wsLims(2,0) = wlZ->get(0).asDouble();    wsLims(2,1) = wlZ->get(1).asDouble();
             }
             else
             {
-                sLims(0,0) = -0.5;                sLims(0,1) =  0.1;
-                sLims(1,0) = -0.6;                sLims(1,1) =  0.6;
-                sLims(2,0) = -0.3;                sLims(2,1) =  0.7;
+                wsLims(0,0) = -0.5;                wsLims(0,1) =  0.1;
+                wsLims(1,0) = -0.6;                wsLims(1,1) =  0.6;
+                wsLims(2,0) = -0.3;                wsLims(2,1) =  0.7;
             }
-            printMessage(0,"Workspace Limits set to: \n%s\n",sLims.toString(3,3).c_str());
+            printMessage(0,"Workspace Limits set to: \n%s\n",wsLims.toString(3,3).c_str());
 
         //******** POSITIONS 2 EXPLORE ************
             // Populate the vector of positions in order for it to be used later
             printMessage(0,"Populating the vectors..\n");
             Vector p(3,0.0);
-            for (double i = sLims(0,0); i <= sLims(0,1); i=i+granP)
+            for (double i = wsLims(0,0); i <= wsLims(0,1); i=i+granP)
             {
-                for (double j = sLims(1,0); j <= sLims(1,1); j=j+granP)
+                for (double j = wsLims(1,0); j <= wsLims(1,1); j=j+granP)
                 {
-                    for (double k = sLims(2,0); k <= sLims(2,1); k=k+granP)
+                    for (double k = wsLims(2,0); k <= wsLims(2,1); k=k+granP)
                     {
                         p(0)=i;
                         p(1)=j;
@@ -301,111 +313,26 @@ public:
         }
         printMessage(1,"The chain has been successfully instantiated.\n");
 
-        // instantiate a IPOPT solver for inverse kinematic
-        // for both translational and rotational part
-        slv = new iKinIpOptMin(*chain,IKINCTRL_POSE_FULL,1e-3,100);  
-
-        // we have a dedicated tolerance for the translational part
-        // which is by default equal to 1e-6;
-        // note that the tolerance is applied to the squared norm
-        slv->setTranslationalTol(1e-8);
-
         return true;
     }
 
     bool updateModule()
     {
-        if (!isJobDone)
+        // Periodically check if all the threads have finished:
+        bool areJobsDone=1;
+
+        for (int i = 0; i < wsEvThreads.size(); i++)
         {
-            printMessage(0,"STARTING EXPLORATION...\n");
-            exploreWorkspace();
-            printMessage(1,"Exploration finished. Number of posess explored: %i\n",poss2Expl.size()*oris2Expl.size());
-            printMessage(0,"SAVING EXPLORATION...\n");
-            saveWorkspace();
-            isJobDone = 1;
+            if (!wsEvThreads[i]->checkJobDone())
+            {
+                areJobsDone = areJobsDone && 0;
+            }
         }
-        else
+
+        if (areJobsDone)
         {
-            printMessage(0,"FINISHED.\n");
             stopModule();
         }
-        return true;
-    }
-
-    /**
-     * Explores the workspace by iteratively span all the joints and store the position into a suitable variable.
-     * @param  jnt the link from which the exploration starts (usually 0)
-     * @return     true/false if success/failure
-     */
-    bool exploreWorkspace()
-    {
-        Vector pos2Expl(3,0.0);  // 3D position    to explore
-        Vector ori2Expl(4,0.0);  // 4D orientation to explore (axis-angle)
-        Vector eul2Expl(3,0.0);  // 3D orientation to explore (euler notation)
-        Vector pose2Expl(7,0.0); // 7D full pose   to explore
-
-        Vector posObt(3,0.0);    // 3D position    that have been actually obtained
-        Vector oriObt(4,0.0);    // 4D orientation that have been actually obtained
-        Vector eulObt(3,0.0);    // 3D orientation that have been actually obtained
-        Vector poseObt(7,0.0);   // 7D full pose   that have been actually obtained
-
-        for (int i = 0; i < poss2Expl.size(); i++)
-        {
-            pos2Expl = poss2Expl[i];
-            pose2Expl.setSubvector(0,pos2Expl);
-
-            for (int j = 0; j < oris2Expl.size(); j++)
-            {
-                ori2Expl = oris2Expl[j];
-                eul2Expl=CTRL_RAD2DEG*dcm2euler(axis2dcm(ori2Expl));
-                pose2Expl.setSubvector(3,ori2Expl);
-
-                Vector qhat = slv->solve(chain->getAng(),pose2Expl);
-                poseObt=chain->EndEffPose();
-                posObt=poseObt.subVector(0,2);
-                oriObt=poseObt.subVector(3,6);
-                eulObt=CTRL_RAD2DEG*dcm2euler(axis2dcm(oriObt));
-
-                if (norm(pos2Expl-posObt)<translationalTol && norm(eul2Expl-eulObt)<orientationalTol)
-                {
-                    reachability[i] += 1.0;
-                    printMessage(1,"%s\t%s has been successfully reached!\n",
-                                pos2Expl.toString(3,3).c_str(), eul2Expl.toString(3,3).c_str());
-                }
-                else
-                {
-                    printMessage(2,"%s\t%s has not been reached. norm(poss)=%g\t norm(euls)=%g\n",
-                                pos2Expl.toString(3,3).c_str(), eul2Expl.toString(3,3).c_str(),
-                                norm(pos2Expl-posObt), norm(eul2Expl-eulObt));
-                    printMessage(4,"%s\t%s\n", posObt.toString(3,3).c_str(), eulObt.toString(3,3).c_str());
-                }
-            }
-        }
-
-        return true;
-    }
-
-    bool saveWorkspace()
-    {
-        Bottle data;
-        ofstream myfile;
-        string fnm=homePath+outputFile;
-        myfile.open(fnm.c_str(),ios::trunc);
-
-        if (myfile.is_open())
-        {
-            for (int i = 0; i < poss2Expl.size(); i++)
-            {
-                data.clear();
-                data.addDouble(poss2Expl[i](0));
-                data.addDouble(poss2Expl[i](1));
-                data.addDouble(poss2Expl[i](2));
-                data.addDouble(reachability[i]);
-                myfile << data.toString() << endl;
-            }
-        }
-        myfile.close();
-
         return true;
     }
 
@@ -433,11 +360,14 @@ public:
 
     bool close()
     {   
-        if (slv)
+        printMessage(0,"Stopping threads..\n");
+        for (int i = 0; i < wsEvThreads.size(); i++)
         {
-            delete slv;
-            slv = 0;
+            wsEvThreads[i]->stop();
+            delete wsEvThreads[i];
+            wsEvThreads[i]=0;
         }
+
         if (arm)
         {
             delete arm;
@@ -454,7 +384,7 @@ public:
 
     double getPeriod()
     {
-        return rate;
+        return 0.5;
     }
 };
 
