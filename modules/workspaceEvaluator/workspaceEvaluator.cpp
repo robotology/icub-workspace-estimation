@@ -23,6 +23,7 @@
 
 #include <iCub/iKin/iKinFwd.h>
 #include <iCub/iKin/iKinIpOpt.h>
+#include <iCub/ctrl/math.h>
 
 #include <iostream>
 #include <fstream>
@@ -37,6 +38,7 @@ using namespace yarp::math;
 using namespace yarp::os;
 
 using namespace iCub::iKin;
+using namespace iCub::ctrl;
 
 using namespace std;
 
@@ -67,6 +69,7 @@ private:
 
     vector<Vector> poss2Expl;
     vector<double> reachability;
+    vector<Vector> oris2Expl;
 
 public:
     workspaceEvaluator()
@@ -80,7 +83,7 @@ public:
         rate             = 0.5;                  // rate
         granP            = 0.01;                 // spatial granularity
         translationalTol = 5e-3;                 // translational tolerance
-        orientationalTol = 1e-8;                 // orientational tolerance
+        orientationalTol = 20;                   // orientational tolerance
         src_mode         = "test";               // src_mode
         DH_file          = "DH.ini";
         URDF_file        = "URDF.xml";
@@ -214,31 +217,53 @@ public:
             }
             else
             {
-                sLims(0,0) = -0.4;                sLims(0,1) =  0.1;
-                sLims(1,0) = -0.4;                sLims(1,1) =  0.4;
-                sLims(2,0) = -0.1;                sLims(2,1) =  0.5;
+                sLims(0,0) = -0.5;                sLims(0,1) =  0.1;
+                sLims(1,0) = -0.6;                sLims(1,1) =  0.6;
+                sLims(2,0) = -0.3;                sLims(2,1) =  0.7;
             }
-            printMessage(0,"Workspace Limits set to: \n%s\n",sLims.toString().c_str());
+            printMessage(0,"Workspace Limits set to: \n%s\n",sLims.toString(3,3).c_str());
 
-        // Populate the vector of positions in order for it to be used later
-        printMessage(0,"Populating the vectors..\n");
-        Vector p(3,0.0);
-        for (double i = sLims(0,0); i <= sLims(0,1); i=i+granP)
-        {
-            for (double j = sLims(1,0); j <= sLims(1,1); j=j+granP)
+        //******** POSITIONS 2 EXPLORE ************
+            // Populate the vector of positions in order for it to be used later
+            printMessage(0,"Populating the vectors..\n");
+            Vector p(3,0.0);
+            for (double i = sLims(0,0); i <= sLims(0,1); i=i+granP)
             {
-                for (double k = sLims(2,0); k <= sLims(2,1); k=k+granP)
+                for (double j = sLims(1,0); j <= sLims(1,1); j=j+granP)
                 {
-                    p(0)=i;
-                    p(1)=j;
-                    p(2)=k;
-                    printMessage(3,"poss2Expl: %s\n",p.toString().c_str());
-                    poss2Expl.push_back(p);
-                    reachability.push_back(0.0);
+                    for (double k = sLims(2,0); k <= sLims(2,1); k=k+granP)
+                    {
+                        p(0)=i;
+                        p(1)=j;
+                        p(2)=k;
+                        printMessage(3,"poss2Expl: %s\n",p.toString(3,3).c_str());
+                        poss2Expl.push_back(p);
+                        reachability.push_back(0.0);
+                    }
                 }
             }
-        }
-        printMessage(0,"Vectors have been populated!\n");
+            printMessage(0,"Vectors have been populated!\n");
+
+        //******** ORIENTATIONS 2 EXPLORE **********
+            // Populate the vector of orientations in order for it to be used later on
+            Vector zyz(3,0.0);
+            int tick = 120;             // in degrees
+
+            for (int i = 0; i < 360; i=i+tick)
+            {
+                for (int j = 0; j < 360; j=j+tick)
+                {
+                    for (int k = 0; k < 360; k=k+tick)
+                    {
+                        zyz(0)=CTRL_DEG2RAD*i;
+                        zyz(1)=CTRL_DEG2RAD*j;
+                        zyz(2)=CTRL_DEG2RAD*k;
+
+                        oris2Expl.push_back(dcm2axis(euler2dcm(zyz)));
+                        printMessage(3,"oris2Expl: %s\n",oris2Expl.back().toString(3,3).c_str());
+                    }
+                }
+            }
 
         return true;
     }
@@ -294,7 +319,7 @@ public:
         {
             printMessage(0,"STARTING EXPLORATION...\n");
             exploreWorkspace();
-            printMessage(1,"Exploration finished. Number of points explored: %i\n",poss2Expl.size());
+            printMessage(1,"Exploration finished. Number of posess explored: %i\n",poss2Expl.size()*oris2Expl.size());
             printMessage(0,"SAVING EXPLORATION...\n");
             saveWorkspace();
             isJobDone = 1;
@@ -316,34 +341,44 @@ public:
     {
         Vector pos2Expl(3,0.0);  // 3D position    to explore
         Vector ori2Expl(4,0.0);  // 4D orientation to explore (axis-angle)
+        Vector eul2Expl(3,0.0);  // 3D orientation to explore (euler notation)
         Vector pose2Expl(7,0.0); // 7D full pose   to explore
 
         Vector posObt(3,0.0);    // 3D position    that have been actually obtained
         Vector oriObt(4,0.0);    // 4D orientation that have been actually obtained
+        Vector eulObt(3,0.0);    // 3D orientation that have been actually obtained
         Vector poseObt(7,0.0);   // 7D full pose   that have been actually obtained
 
         for (int i = 0; i < poss2Expl.size(); i++)
         {
-            /* TODO put the code for spanning the orientation */
-
             pos2Expl = poss2Expl[i];
             pose2Expl.setSubvector(0,pos2Expl);
-            pose2Expl.setSubvector(3,ori2Expl);
 
-            Vector qhat = slv->solve(chain->getAng(),pose2Expl);
-            // printMessage(0,"qhat")
-            poseObt=chain->EndEffPose();
-            posObt=poseObt.subVector(0,2);
-            oriObt=poseObt.subVector(3,6);
+            for (int j = 0; j < oris2Expl.size(); j++)
+            {
+                ori2Expl = oris2Expl[j];
+                eul2Expl=CTRL_RAD2DEG*dcm2euler(axis2dcm(ori2Expl));
+                pose2Expl.setSubvector(3,ori2Expl);
 
-            if (norm(pos2Expl-posObt)<translationalTol)// && norm(ori2Expl-oriObt)<orientationalTol)
-            {
-                reachability[i] += 1.0;
-                printMessage(1,"Pose %s has been successfully reached!\n", pos2Expl.toString().c_str());
-            }
-            else
-            {
-                printMessage(2,"Pose %s has not been reached. norm(pos2Expl-posObt)=%g\n", pos2Expl.toString().c_str(), norm(pos2Expl-posObt));
+                Vector qhat = slv->solve(chain->getAng(),pose2Expl);
+                poseObt=chain->EndEffPose();
+                posObt=poseObt.subVector(0,2);
+                oriObt=poseObt.subVector(3,6);
+                eulObt=CTRL_RAD2DEG*dcm2euler(axis2dcm(oriObt));
+
+                if (norm(pos2Expl-posObt)<translationalTol && norm(eul2Expl-eulObt)<orientationalTol)
+                {
+                    reachability[i] += 1.0;
+                    printMessage(1,"%s\t%s has been successfully reached!\n",
+                                pos2Expl.toString(3,3).c_str(), eul2Expl.toString(3,3).c_str());
+                }
+                else
+                {
+                    printMessage(2,"%s\t%s has not been reached. norm(poss)=%g\t norm(euls)=%g\n",
+                                pos2Expl.toString(3,3).c_str(), eul2Expl.toString(3,3).c_str(),
+                                norm(pos2Expl-posObt), norm(eul2Expl-eulObt));
+                    printMessage(4,"%s\t%s\n", posObt.toString(3,3).c_str(), eulObt.toString(3,3).c_str());
+                }
             }
         }
 
@@ -446,7 +481,7 @@ int main(int argc, char * argv[])
         cout<<"   --translationalTol double: the translational tolerance used to assess if a point in the workspace has"<<endl;
         cout<<"                              been reached. Default 5e-3m"<<endl;
         cout<<"   --orientationalTol double: the orientational tolerance used to assess if a point in the workspace has"<<endl;
-        cout<<"                              been reached. Default "<<endl;
+        cout<<"                              been reached. Default 20[deg]"<<endl;
         cout<<"   --src_mode         mode:   source to use finding the chain (either test, DH, or URDF; default test)."<<endl;
         cout<<"                              NOTE:"<<endl;
         cout<<"                              \'test\' creates a right iCubArm and tests the software on it;"<<endl;
