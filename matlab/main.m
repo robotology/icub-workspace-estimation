@@ -7,8 +7,8 @@
 % generate a function instead of a script.
 
 %% Initialize variables.
-filename = '/home/alecive/.local/share/yarp/contexts/iCubWorkspace/output.ini';
-filename = '../app/conf/output.ini';
+filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
+% filename = '../app/conf/output.ini';
 delimiter = ' ';
 
 %% Format string for each line of text:
