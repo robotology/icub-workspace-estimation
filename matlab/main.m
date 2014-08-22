@@ -49,10 +49,12 @@ c = reachedPts(:,4);
 
 % Plot only the surface of the points under evaluation.
 K = convhull(x,y,z);
-trisurf(K,x,y,z);
+trisurf(K,x,y,z,c,'facealpha',0.5);
+colormap('summer');
+colorbar;
 
 % scatter3(reachedPts(:,1),reachedPts(:,2),reachedPts(:,3),12,reachedPts(:,4),'.');
 
 drawRefFrame(eye(4),0.6);
 
-clear i;
+clear i x y z c rP ans;
