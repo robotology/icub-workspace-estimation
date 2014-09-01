@@ -113,8 +113,8 @@ double workspaceEvThread::computeManipulability()
      */
     
     // Let's take only the positional components of the jacobian
-    // Matrix J_a   = chain.AnaJacobian();
-    Matrix J_a   = chain.GeoJacobian();
+    Matrix J_a   = chain.AnaJacobian();
+    // Matrix J_a   = chain.GeoJacobian();
 
     return sqrt(det(J_a * J_a.transposed()));
 }
