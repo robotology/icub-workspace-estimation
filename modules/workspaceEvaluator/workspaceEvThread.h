@@ -92,13 +92,6 @@ protected:
      */
     double computeManipulability();
 
-
-    /**
-     * Saves the workspace on file. Filename is given by outputFile;
-     * @return     true/false if success/failure
-     */
-    bool saveWorkspace();
-
     /**
     * Prints a message according to the verbosity level:
     * @param l is the level of verbosity: if level > verbosity, something is printed
@@ -127,6 +120,12 @@ public:
      * @return     true/false if finished/still going on
      */
     bool checkJobDone() { return isJobDone; };
+
+    /**
+     * Saves the workspace on file. Filename is given by outputFile;
+     * @return     true/false if success/failure
+     */
+    bool saveWorkspace();
 
     /**
      * Get Functions

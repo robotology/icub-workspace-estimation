@@ -6,25 +6,21 @@ workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT,
                                      RateThread(_rate), verbosity(_v), name(_n),
                                      translationalTol(_tT), outputFile(_oF), rate(_rate)
 {
-    printMessage(0,"norm name %s chainDOF %i\n\n",name.c_str(),chain.getDOF());
     poss2Expl = _p2E;
     chain = _c;
+    printMessage(0,"normalConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
 }
 
 workspaceEvThread::workspaceEvThread(const workspaceEvThread &_wET):
-                                     RateThread(_wET.getRate()), rate(_wET.getRate())
+                                     RateThread(_wET.getRate()), rate(_wET.getRate()),
+                                     verbosity(_wET.getVerbosity()),name(_wET.getName()),
+                                     translationalTol(_wET.getTranslationalTol()),
+                                     outputFile(_wET.getOutputFile())
 {
-    verbosity = _wET.getVerbosity();
-    name      = _wET.getName();
     chain     = _wET.getChain();
-
-    translationalTol = _wET.getTranslationalTol();
-
-    outputFile = _wET.getOutputFile();
-
     poss2Expl = _wET.getPoss2Expl();
 
-    printMessage(0,"copy name %s chainDOF %i\n\n",name.c_str(),chain.getDOF());
+    printMessage(0,"copyConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
 }
 
 bool workspaceEvThread::threadInit()
@@ -40,7 +36,7 @@ bool workspaceEvThread::threadInit()
         reachability.push_back(0.0);
     }
 
-    printMessage(0,"init name %s chainDOF %i\n\n",name.c_str(),chain.getDOF());
+    printMessage(0,"threadInit name %s chainDOF %i\n",name.c_str(),chain.getDOF());
 
     return true;
 }
@@ -80,6 +76,7 @@ bool workspaceEvThread::exploreWorkspace()
 
     pos2Expl = poss2Expl[cnt];
 
+    printMessage(2,"Exploring %s..\n",pos2Expl.toString(3,3).c_str());
     Vector qhat = slv->solve(chain.getAng(),pos2Expl);
     poseObt=chain.EndEffPose();
     posObt=poseObt.subVector(0,2);

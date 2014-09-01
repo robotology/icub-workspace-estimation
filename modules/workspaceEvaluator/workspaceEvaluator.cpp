@@ -59,7 +59,8 @@ class workspaceEvaluator: public RFModule
 {
 private:
     std::vector<workspaceEvThread> wsEvThreads;
-    ResourceFinder rf;
+    ResourceFinder                 rf;
+    RpcServer                      rpcSrvr;
 
     string name;
     double rate;
@@ -104,6 +105,38 @@ public:
         // wsLims = [minX maxX; minY maxY; minZ maxZ]
         wsLims.resize(3,2);
         wsLims.zero();
+    }
+
+    bool respond(const Bottle &command, Bottle &reply)
+    {
+        int ack =Vocab::encode("ack");
+        int nack=Vocab::encode("nack");
+
+        if (command.size()>0)
+        {
+            switch (command.get(0).asVocab())
+            {
+                //-----------------
+                case VOCAB4('s','a','v','e'):
+                {
+                    int res=Vocab::encode("saved");
+            
+                    for (int i = 0; i < wsEvThreads.size(); i++)
+                    {
+                        wsEvThreads[i].saveWorkspace();
+                    }
+                    reply.addVocab(ack);
+                    reply.addVocab(res);
+                    return true;
+                }     
+                //-----------------
+                default:
+                    return RFModule::respond(command,reply);
+            }
+        }
+
+        reply.addVocab(nack);
+        return true;
     }
 
     bool configure(ResourceFinder &_rf)
@@ -211,9 +244,10 @@ public:
             {
                 printMessage(1,"Instantiating thread %i...\n",i);
                 string threadName = name + "Thread_" + int_to_string(i);
+                string threadOutputFile = homePath+outputFile + "_" + int_to_string(i);
                 iKinChain _chain(*chain);
-                wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,translationalTol,_chain,
-                                                        poss2Expl,(homePath+outputFile)));
+                wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,translationalTol,
+                                                        _chain,poss2Expl,threadOutputFile));
                 printMessage(2,"Thread %i instantiated.\n",i);
             }
             printMessage(0,"workspaceEvThreads have been istantiated...\n");
@@ -222,9 +256,15 @@ public:
             {
                 printMessage(1,"Starting thread %i...\n",i);
                 wsEvThreads[i].start();
+                Time::delay(2);
                 printMessage(2,"Thread #i started.\n");
             }
             printMessage(0,"workspaceEvThreads have been started...\n");
+
+        //******************************************************
+        //************************ PORTS ***********************
+            rpcSrvr.open(("/"+name+"/rpc:i").c_str());
+            attach(rpcSrvr);
 
         return true;
     }
