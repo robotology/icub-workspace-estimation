@@ -37,6 +37,7 @@
 #include <string>
 #include <vector>
 #include <stdarg.h>
+#include <cmath>
 
 using namespace yarp;
 using namespace yarp::sig;
@@ -62,8 +63,6 @@ protected:
     double rate;
     // Translational Tolerance:   
     double translationalTol;
-    // Orientational Tolerance:
-    double orientationalTol;
 
     /***************************************************************************/
     // INTERNAL VARIABLES:
@@ -78,7 +77,7 @@ protected:
 
     vector<Vector> poss2Expl;
     vector<Vector> oris2Expl;
-    vector<int>    reachability;
+    vector<double> reachability;
 
     /**
      * Explores the workspace by iteratively span all the joints and store the position into a suitable variable.
@@ -86,6 +85,13 @@ protected:
      * @return     true/false if success/failure
      */
     bool exploreWorkspace();
+
+    /**
+     * Computes the manipulability for the iKinChain to be stored into the reachability vector.
+     * @return the manipulability value in the current configuration.
+     */
+    double computeManipulability();
+
 
     /**
      * Saves the workspace on file. Filename is given by outputFile;
@@ -102,9 +108,9 @@ protected:
     
 public:
     // CONSTRUCTOR
-    workspaceEvThread(int _rate, int _v, string _n, double _tT, double _oT,
+    workspaceEvThread(int _rate, int _v, string _n, double _tT,
                       const iKinChain &_c, const vector<Vector> &_p2E,
-                      const vector<Vector> &_o2E, string _oF);
+                      string _oF);
 
     // COPY CONSTRUCTOR
     workspaceEvThread(const workspaceEvThread &_wET);
@@ -131,7 +137,6 @@ public:
     double getRate()     const { return rate; };
 
     double getTranslationalTol() const { return translationalTol; };
-    double getOrientationalTol() const { return orientationalTol; };
 
     string getOutputFile() const { return outputFile; };
 

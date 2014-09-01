@@ -67,7 +67,6 @@ private:
     bool   isJobDone;
     double granP;
     double translationalTol;
-    double orientationalTol;
     int    threadsNum;
 
     string src_mode;
@@ -83,7 +82,6 @@ private:
     iKinChain    *chain;
 
     vector<Vector> poss2Expl;
-    vector<Vector> oris2Expl;
     vector<double> reachability;
 
 public:
@@ -97,7 +95,6 @@ public:
         rate             = 0.5;                  // rate
         granP            = 0.01;                 // spatial granularity
         translationalTol = 5e-3;                 // translational tolerance
-        orientationalTol = 20;                   // orientational tolerance
         src_mode         = "test";               // src_mode
         DH_file          = "DH.ini";
         URDF_file        = "URDF.xml";
@@ -147,14 +144,6 @@ public:
                 printMessage(0,"Each joint will be divided into %g translationalTol\n", translationalTol);
             }
             else printMessage(0,"Could not find translationalTol in the config file; using %g as default.\n",translationalTol);
-
-        //************** ORIENTATIONAL TOLERANCE ***************
-            if (rf.check("orientationalTol"))
-            {
-                orientationalTol = rf.find("orientationalTol").asDouble();
-                printMessage(0,"Each joint will be divided into %g orientationalTol\n", orientationalTol);
-            }
-            else printMessage(0,"Could not find orientationalTol in the config file; using %g as default.\n",orientationalTol);
 
         //********************  VERBOSITY **********************
             if (rf.check("verbosity"))
@@ -223,14 +212,13 @@ public:
                 printMessage(1,"Instantiating thread %i...\n",i);
                 string threadName = name + "Thread_" + int_to_string(i);
                 iKinChain _chain(*chain);
-                wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,translationalTol,
-                                                        orientationalTol,_chain,poss2Expl,
-                                                        oris2Expl,(homePath+outputFile)));
+                wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,translationalTol,_chain,
+                                                        poss2Expl,(homePath+outputFile)));
                 printMessage(2,"Thread %i instantiated.\n",i);
             }
             printMessage(0,"workspaceEvThreads have been istantiated...\n");
 
-            for (int i = 1; i < 2; i++)
+            for (int i = 0; i < 1; i++)
             {
                 printMessage(1,"Starting thread %i...\n",i);
                 wsEvThreads[i].start();
@@ -289,28 +277,6 @@ public:
                 }
             }
             printMessage(0,"Vectors have been populated!\n");
-
-        //******** ORIENTATIONS 2 EXPLORE **********
-            // Populate the vector of orientations in order for it to be used later on
-            Vector zyz(3,0.0);
-            int tick = 120;             // in degrees
-
-            for (int i = 0; i < 360; i=i+tick)
-            {
-                for (int j = 0; j < 360; j=j+tick)
-                {
-                    for (int k = 0; k < 360; k=k+tick)
-                    {
-                        zyz(0)=CTRL_DEG2RAD*i;
-                        zyz(1)=CTRL_DEG2RAD*j;
-                        zyz(2)=CTRL_DEG2RAD*k;
-
-                        oris2Expl.push_back(dcm2axis(euler2dcm(zyz)));
-                        printMessage(3,"oris2Expl: %s\n",oris2Expl.back().toString(3,3).c_str());
-                    }
-                }
-            }
-            printMessage(0,"Orientations to explore have been created!\n");
 
         return true;
     }
@@ -443,8 +409,6 @@ int main(int argc, char * argv[])
         cout<<"   --granP            double: the spatial granularity of the workspace exploration. Default 1cm."<<endl;
         cout<<"   --translationalTol double: the translational tolerance used to assess if a point in the workspace has"<<endl;
         cout<<"                              been reached. Default 5e-3m"<<endl;
-        cout<<"   --orientationalTol double: the orientational tolerance used to assess if a point in the workspace has"<<endl;
-        cout<<"                              been reached. Default 20[deg]"<<endl;
         cout<<"   --src_mode         mode:   source to use finding the chain (either test, DH, or URDF; default test)."<<endl;
         cout<<"                              NOTE:"<<endl;
         cout<<"                              \'test\' creates a right iCubArm and tests the software on it;"<<endl;
