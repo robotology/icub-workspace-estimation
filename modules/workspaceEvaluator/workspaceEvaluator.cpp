@@ -179,7 +179,7 @@ public:
             if (rf.check("granP"))
             {
                 granP = rf.find("granP").asDouble();
-                printMessage(0,"Granularity will be %g m\n", granP);
+                printMessage(0,"Granularity will be %g[m]\n", granP);
             }
             else printMessage(0,"Could not find granP in the config file; using %g as default.\n",granP);
 
