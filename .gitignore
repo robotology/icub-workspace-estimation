@@ -6,3 +6,4 @@ install_manifest.txt
 build/*
 *.bk
 output.ini
+output.ini*
