@@ -77,7 +77,7 @@ bool workspaceEvThread::exploreWorkspace()
     pos2Expl = poss2Expl[cnt];
 
     printMessage(2,"Advancement: %g\tExploring %s starting from %s..\n",pos2Expl.toString(3,3).c_str(),
-                    double(100*cnt/poss2Expl.size()),chain.getAng().toString(3,3).c_str());
+                    getAdvancement(),chain.getAng().toString(3,3).c_str());
     Vector qhat = slv->solve(chain.getAng(),pos2Expl);
 
     poseObt=chain.EndEffPose();

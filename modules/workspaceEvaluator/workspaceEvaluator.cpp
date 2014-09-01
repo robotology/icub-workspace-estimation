@@ -127,7 +127,21 @@ public:
                     reply.addVocab(ack);
                     reply.addVocab(res);
                     return true;
-                }     
+                }
+                //-----------------
+                case VOCAB4('a','d','v','a'):
+                {
+                    double avgAdvancement=0.0;
+                    for (int i = 0; i < wsEvThreads.size(); i++)
+                    {
+                        avgAdvancement += wsEvThreads[i].getAdvancement();
+                    }
+                    avgAdvancement /= wsEvThreads.size();
+
+                    reply.addVocab(ack);
+                    reply.addDouble(avgAdvancement);
+                    return true;
+                }
                 //-----------------
                 default:
                     return RFModule::respond(command,reply);

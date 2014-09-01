@@ -134,6 +134,7 @@ public:
     iKinChain getChain() const { return chain; };
     double getRate()     const { return rate; };
     double getXYZTol()   const { return XYZTol; };
+    double getAdvancement()    { return 100.0*cnt*poss2Expl.size(); };
 
     string getOutputFile() const { return outputFile; };
 
