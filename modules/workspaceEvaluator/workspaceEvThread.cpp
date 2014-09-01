@@ -4,7 +4,7 @@ workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT,
                                      const iKinChain &_c, const vector<Vector> &_p2E,
                                      string _oF) :
                                      RateThread(_rate), verbosity(_v), name(_n),
-                                     translationalTol(_tT), outputFile(_oF), rate(_rate)
+                                     XYZTol(_tT), outputFile(_oF), rate(_rate)
 {
     poss2Expl = _p2E;
     chain = _c;
@@ -14,7 +14,7 @@ workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT,
 workspaceEvThread::workspaceEvThread(const workspaceEvThread &_wET):
                                      RateThread(_wET.getRate()), rate(_wET.getRate()),
                                      verbosity(_wET.getVerbosity()),name(_wET.getName()),
-                                     translationalTol(_wET.getTranslationalTol()),
+                                     XYZTol(_wET.getXYZTol()),
                                      outputFile(_wET.getOutputFile())
 {
     chain     = _wET.getChain();
@@ -36,7 +36,7 @@ bool workspaceEvThread::threadInit()
         reachability.push_back(0.0);
     }
 
-    printMessage(0,"threadInit name %s chainDOF %i\n",name.c_str(),chain.getDOF());
+    printMessage(0,"threadInit name %s #poss2Expl %i\n",name.c_str(),poss2Expl.size());
 
     return true;
 }
@@ -76,12 +76,14 @@ bool workspaceEvThread::exploreWorkspace()
 
     pos2Expl = poss2Expl[cnt];
 
-    printMessage(2,"Exploring %s..\n",pos2Expl.toString(3,3).c_str());
+    printMessage(2,"Advancement: %g\tExploring %s starting from %s..\n",pos2Expl.toString(3,3).c_str(),
+                    double(100*cnt/poss2Expl.size()),chain.getAng().toString(3,3).c_str());
     Vector qhat = slv->solve(chain.getAng(),pos2Expl);
+
     poseObt=chain.EndEffPose();
-    posObt=poseObt.subVector(0,2);
+    posObt =poseObt.subVector(0,2);
     
-    if (norm(pos2Expl-posObt)<translationalTol)
+    if (norm(pos2Expl-posObt)<XYZTol)
     {
         reachability[cnt] = computeManipulability();
         printMessage(1,"%s\thas been successfully reached! Manipulability: %g\n",
@@ -89,7 +91,7 @@ bool workspaceEvThread::exploreWorkspace()
     }
     else
     {
-        printMessage(2,"%s\thas not been reached. norm(poss)=%g\tposObt=%s\n",
+        printMessage(3,"%s\thas not been reached. norm(poss)=%g\tposObt=%s\n",
                     pos2Expl.toString(3,3).c_str(), norm(pos2Expl-posObt),
                     posObt.toString(3,3).c_str());
     }
@@ -126,7 +128,7 @@ bool workspaceEvThread::saveWorkspace()
         reached += bool(reachability[i]);
     }
     printMessage(1,"Number of poses explored: %i\tNumber of poses reached: %i\n",
-                    cnt*oris2Expl.size(),reached);
+                    cnt,reached);
     Bottle data;
     ofstream myfile;
     myfile.open(outputFile.c_str(),ios::trunc);
@@ -144,6 +146,7 @@ bool workspaceEvThread::saveWorkspace()
         }
     }
     myfile.close();
+    printMessage(1,"File saved.\n");
 
     return true;
 }

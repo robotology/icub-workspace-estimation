@@ -44,7 +44,6 @@ using namespace iCub::ctrl;
 
 using namespace std;
 
-
 /**
 * Converts an int to a string
 **/
@@ -67,7 +66,7 @@ private:
     int    verbosity;
     bool   isJobDone;
     double granP;
-    double translationalTol;
+    double XYZTol;
     int    threadsNum;
 
     string src_mode;
@@ -88,18 +87,18 @@ private:
 public:
     workspaceEvaluator()
     {
-        arm       = 0;
-        limb      = 0;
-        isJobDone = 0;
-        name             = "workspaceEvaluator"; // name
-        verbosity        = 0;                    // verbosity
-        rate             = 0.5;                  // rate
-        granP            = 0.01;                 // spatial granularity
-        translationalTol = 5e-3;                 // translational tolerance
-        src_mode         = "test";               // src_mode
-        DH_file          = "DH.ini";
-        URDF_file        = "URDF.xml";
-        threadsNum       = 1;
+        arm        = 0;
+        limb       = 0;
+        isJobDone  = 0;
+        name       = "workspaceEvaluator"; // name
+        verbosity  = 0;                    // verbosity
+        rate       = 0.5;                  // rate
+        granP      = 0.01;                 // spatial granularity
+        XYZTol     = 5e-3;                 // translational tolerance
+        src_mode   = "test";               // src_mode
+        DH_file    = "DH.ini";
+        URDF_file  = "URDF.xml";
+        threadsNum = 1;
 
         // These are the limits of the exploration of the workspace, defined as a 3x2 matrix
         // wsLims = [minX maxX; minY maxY; minZ maxZ]
@@ -171,12 +170,12 @@ public:
             else printMessage(0,"Could not find granP in the config file; using %g as default.\n",granP);
 
         //************** TRANSLATIONAL TOLERANCE ***************
-            if (rf.check("translationalTol"))
+            if (rf.check("XYZTol"))
             {
-                translationalTol = rf.find("translationalTol").asDouble();
-                printMessage(0,"Each joint will be divided into %g translationalTol\n", translationalTol);
+                XYZTol = rf.find("XYZTol").asDouble();
+                printMessage(0,"Each joint will be divided into %g XYZTol\n", XYZTol);
             }
-            else printMessage(0,"Could not find translationalTol in the config file; using %g as default.\n",translationalTol);
+            else printMessage(0,"Could not find XYZTol in the config file; using %g as default.\n",XYZTol);
 
         //********************  VERBOSITY **********************
             if (rf.check("verbosity"))
@@ -246,17 +245,17 @@ public:
                 string threadName = name + "Thread_" + int_to_string(i);
                 string threadOutputFile = homePath+outputFile + "_" + int_to_string(i);
                 iKinChain _chain(*chain);
-                wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,translationalTol,
+                wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,XYZTol,
                                                         _chain,poss2Expl,threadOutputFile));
                 printMessage(2,"Thread %i instantiated.\n",i);
             }
             printMessage(0,"workspaceEvThreads have been istantiated...\n");
 
-            for (int i = 0; i < 1; i++)
+            for (int i = 0; i < wsEvThreads.size(); i++)
             {
                 printMessage(1,"Starting thread %i...\n",i);
                 wsEvThreads[i].start();
-                Time::delay(2);
+                Time::delay(4);
                 printMessage(2,"Thread #i started.\n");
             }
             printMessage(0,"workspaceEvThreads have been started...\n");
@@ -310,7 +309,7 @@ public:
                         p(0)=i;
                         p(1)=j;
                         p(2)=k;
-                        printMessage(3,"poss2Expl: %s\n",p.toString(3,3).c_str());
+                        printMessage(4,"poss2Expl: %s\n",p.toString(3,3).c_str());
                         poss2Expl.push_back(p);
                         reachability.push_back(0.0);
                     }
@@ -441,23 +440,29 @@ int main(int argc, char * argv[])
     if (moduleRF.check("help"))
     {    
         cout<<endl<<"Options:"<<endl;
-        cout<<"   --context          path:   where to find the called resource (default periPersonalSpace)."<<endl;
-        cout<<"   --from             from:   the name of the .ini file (default workspaceEvaluator.ini)."<<endl;
-        cout<<"   --name             name:   the name of the module (default workspaceEvaluator)."<<endl;
-        cout<<"   --verbosity        int:    verbosity level (default 0)."<<endl;
-        cout<<"   --rate             int:    the period used by the module. Default 500ms."<<endl;
-        cout<<"   --granP            double: the spatial granularity of the workspace exploration. Default 1cm."<<endl;
-        cout<<"   --translationalTol double: the translational tolerance used to assess if a point in the workspace has"<<endl;
-        cout<<"                              been reached. Default 5e-3m"<<endl;
-        cout<<"   --src_mode         mode:   source to use finding the chain (either test, DH, or URDF; default test)."<<endl;
-        cout<<"                              NOTE:"<<endl;
-        cout<<"                              \'test\' creates a right iCubArm and tests the software on it;"<<endl;
-        cout<<"                              \'DH\'   needs a proper DH.ini with the specification of the chain in DH convention;"<<endl;
-        cout<<"                              \'URDF\' needs a proper URDF file."<<endl;
-        cout<<"   --DH_file          string: DH.ini file to be used alongside the \'DH\' src_mode."<<endl;
-        cout<<"   --URDF_file        string: URDF   file to be used alongside the \'URDF\' src_mode."<<endl;
+        cout<<"   --context    path:   where to find the called resource (default periPersonalSpace)."<<endl;
+        cout<<"   --from       from:   the name of the .ini file (default workspaceEvaluator.ini)."<<endl;
+        cout<<"   --name       name:   the name of the module (default workspaceEvaluator)."<<endl;
+        cout<<"   --verbosity  int:    verbosity level (default 0)."<<endl;
+        cout<<"   --rate       int:    the period used by the module. Default 500ms."<<endl;
+        cout<<"   --granP      double: the spatial granularity of the workspace exploration. Default 1cm."<<endl;
+        cout<<"   --XYZTol     double: the translational tolerance used to assess if a point in the workspace has"<<endl;
+        cout<<"                        been reached. Default 5e-3m"<<endl;
+        cout<<"   --src_mode   mode:   source to use finding the chain (either test, DH, or URDF; default test)."<<endl;
+        cout<<"                        NOTE:"<<endl;
+        cout<<"                          \'test\' creates a right iCubArm and tests the software on it;"<<endl;
+        cout<<"                          \'DH\'   needs a proper DH.ini with the chain in DH convention;"<<endl;
+        cout<<"                          \'URDF\' needs a proper URDF file."<<endl;
+        cout<<"   --DH_file    string: DH.ini file to be used alongside the \'DH\' src_mode."<<endl;
+        cout<<"   --URDF_file  string: URDF   file to be used alongside the \'URDF\' src_mode."<<endl;
         cout<<endl;
         return 0;
+    }
+
+    Network yarp;
+    if (!yarp.checkNetwork())
+    {
+        printf("No Network!!!\n");
     }
 
     workspaceEvaluator workEv;

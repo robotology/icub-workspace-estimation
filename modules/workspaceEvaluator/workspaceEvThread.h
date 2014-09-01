@@ -62,7 +62,7 @@ protected:
     // Rate of the thread:
     double rate;
     // Translational Tolerance:   
-    double translationalTol;
+    double XYZTol;
 
     /***************************************************************************/
     // INTERNAL VARIABLES:
@@ -76,7 +76,6 @@ protected:
     iKinIpOptMin *slv;
 
     vector<Vector> poss2Expl;
-    vector<Vector> oris2Expl;
     vector<double> reachability;
 
     /**
@@ -134,13 +133,11 @@ public:
     string getName()     const { return name; };
     iKinChain getChain() const { return chain; };
     double getRate()     const { return rate; };
-
-    double getTranslationalTol() const { return translationalTol; };
+    double getXYZTol()   const { return XYZTol; };
 
     string getOutputFile() const { return outputFile; };
 
     vector<Vector> getPoss2Expl() const { return poss2Expl; };
-    vector<Vector> getOris2Expl() const { return oris2Expl; };
 };
 
 #endif
