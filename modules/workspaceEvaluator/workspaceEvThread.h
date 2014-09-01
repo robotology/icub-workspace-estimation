@@ -58,6 +58,8 @@ protected:
     int verbosity;
     // Name of the thread:
     string name;
+    // Rate of the thread:
+    double rate;
     // Translational Tolerance:   
     double translationalTol;
     // Orientational Tolerance:
@@ -68,7 +70,6 @@ protected:
     int    cnt;                     // Counter that handles the cycling through the positions
     int    step;                    // Counter that manages the state machine
     bool   isJobDone;
-    string src_mode;
     string homePath;
     string outputFile;
 
@@ -104,6 +105,10 @@ public:
     workspaceEvThread(int _rate, int _v, string _n, double _tT, double _oT,
                       const iKinChain &_c, const vector<Vector> &_p2E,
                       const vector<Vector> &_o2E, string _oF);
+
+    // COPY CONSTRUCTOR
+    workspaceEvThread(const workspaceEvThread &_wET);
+
     // INIT
     virtual bool threadInit();
     // RUN
@@ -116,6 +121,22 @@ public:
      * @return     true/false if finished/still going on
      */
     bool checkJobDone() { return isJobDone; };
+
+    /**
+     * Get Functions
+     */
+    int getVerbosity()   const { return verbosity; };
+    string getName()     const { return name; };
+    iKinChain getChain() const { return chain; };
+    double getRate()     const { return rate; };
+
+    double getTranslationalTol() const { return translationalTol; };
+    double getOrientationalTol() const { return orientationalTol; };
+
+    string getOutputFile() const { return outputFile; };
+
+    vector<Vector> getPoss2Expl() const { return poss2Expl; };
+    vector<Vector> getOris2Expl() const { return oris2Expl; };
 };
 
 #endif

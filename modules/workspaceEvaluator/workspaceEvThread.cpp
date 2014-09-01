@@ -5,11 +5,37 @@ workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT, d
                                      const vector<Vector> &_o2E, string _oF) :
                                      RateThread(_rate), verbosity(_v), name(_n),
                                      translationalTol(_tT), orientationalTol(_oT),
-                                     outputFile(_oF)
+                                     outputFile(_oF), rate(_rate)
 {
+    printMessage(0,"norm name %s chainDOF %i\n\n",name.c_str(),chain.getDOF());
     poss2Expl = _p2E;
     oris2Expl = _o2E;
     chain = _c;
+}
+
+workspaceEvThread::workspaceEvThread(const workspaceEvThread &_wET):
+                                     RateThread(_wET.getRate()), rate(_wET.getRate())
+{
+    verbosity = _wET.getVerbosity();
+    name      = _wET.getName();
+    chain     = _wET.getChain();
+
+    translationalTol = _wET.getTranslationalTol();
+    orientationalTol = _wET.getOrientationalTol();
+
+    outputFile = _wET.getOutputFile();
+
+    poss2Expl = _wET.getPoss2Expl();
+    oris2Expl = _wET.getOris2Expl();
+
+    printMessage(0,"copy name %s chainDOF %i\n\n",name.c_str(),chain.getDOF());
+}
+
+bool workspaceEvThread::threadInit()
+{
+    cnt       = 0;
+    step      = 0;
+    isJobDone = 0;
 
     slv = new iKinIpOptMin(chain,IKINCTRL_POSE_FULL,1e-3,100);  
     slv->setTranslationalTol(1e-8);
@@ -18,13 +44,8 @@ workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT, d
     {
         reachability.push_back(0);
     }
-}
 
-bool workspaceEvThread::threadInit()
-{
-    cnt       = 0;
-    step      = 0;
-    isJobDone = 0;
+    printMessage(0,"init name %s chainDOF %i\n\n",name.c_str(),chain.getDOF());
 
     return true;
 }

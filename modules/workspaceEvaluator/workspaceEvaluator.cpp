@@ -44,12 +44,23 @@ using namespace iCub::ctrl;
 
 using namespace std;
 
+
+/**
+* Converts an int to a string
+**/
+string int_to_string( const int a ) 
+{
+    std::stringstream ss;
+    ss << a;
+    return ss.str();
+};
+
 class workspaceEvaluator: public RFModule 
 {
 private:
-    vector<workspaceEvThread*>wsEvThreads;
-    workspaceEvThread *wSET;
+    std::vector<workspaceEvThread> wsEvThreads;
     ResourceFinder rf;
+
     string name;
     double rate;
     int    verbosity;
@@ -57,6 +68,7 @@ private:
     double granP;
     double translationalTol;
     double orientationalTol;
+    int    threadsNum;
 
     string src_mode;
     string homePath;
@@ -89,6 +101,7 @@ public:
         src_mode         = "test";               // src_mode
         DH_file          = "DH.ini";
         URDF_file        = "URDF.xml";
+        threadsNum       = 1;
 
         // These are the limits of the exploration of the workspace, defined as a 3x2 matrix
         // wsLims = [minX maxX; minY maxY; minZ maxZ]
@@ -143,13 +156,21 @@ public:
             }
             else printMessage(0,"Could not find orientationalTol in the config file; using %g as default.\n",orientationalTol);
 
-        //********************** VERBOSE ***********************
+        //********************  VERBOSITY **********************
             if (rf.check("verbosity"))
             {
                 verbosity = rf.find("verbosity").asInt();
-                printMessage(0,"Module verbosity set to %i\n",verbosity);
+                printMessage(0,"Verbosity set to %i\n",verbosity);
             }
             else printMessage(0,"Could not find verbosity option in config file; using %i as default.\n",verbosity);
+
+        //***************** NUMBER OF THREADS ******************
+            if (rf.check("threadsNum"))
+            {
+                threadsNum = rf.find("threadsNum").asInt();
+                printMessage(0,"ThreadsNum set to %i\n",threadsNum);
+            }
+            else printMessage(0,"Could not find threadsNum option in config file; using %i as default.\n",threadsNum);
 
         //******************** SOURCE_MODE *********************
             if (rf.check("src_mode"))
@@ -191,19 +212,32 @@ public:
             outputFile = rf.check("outputFile", Value("output.ini")).asString().c_str();
             printMessage(0,"Storing file set to: %s\n", (homePath+outputFile).c_str());
 
-        if(!initVariables())      return false;
-        if(!configureInvKin())    return false;
+        //***************** INITIALIZE STUFF *******************
+            if(!initVariables())      return false;
+            if(!configureInvKin())    return false;
 
         //********************* THREAD(s) **********************
-            for (int i = 0; i < 1; i)
+            wsEvThreads.reserve(threadsNum);
+            for (int i = 0; i < threadsNum; i++)
             {
-                wsEvThreads.push_back(new workspaceEvThread(rate,verbosity,name,translationalTol,
-                                                            orientationalTol,*chain,poss2Expl,
-                                                            oris2Expl,(homePath+outputFile)));
-
-                wsEvThreads.back()->start();
+                printMessage(1,"Instantiating thread %i...\n",i);
+                string threadName = name + "Thread_" + int_to_string(i);
+                iKinChain _chain(*chain);
+                wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,translationalTol,
+                                                        orientationalTol,_chain,poss2Expl,
+                                                        oris2Expl,(homePath+outputFile)));
+                printMessage(2,"Thread %i instantiated.\n",i);
             }
             printMessage(0,"workspaceEvThreads have been istantiated...\n");
+
+            for (int i = 1; i < 2; i++)
+            {
+                printMessage(1,"Starting thread %i...\n",i);
+                wsEvThreads[i].start();
+                printMessage(2,"Thread #i started.\n");
+            }
+            printMessage(0,"workspaceEvThreads have been started...\n");
+
         return true;
     }
 
@@ -276,6 +310,7 @@ public:
                     }
                 }
             }
+            printMessage(0,"Orientations to explore have been created!\n");
 
         return true;
     }
@@ -323,7 +358,7 @@ public:
 
         for (int i = 0; i < wsEvThreads.size(); i++)
         {
-            if (!wsEvThreads[i]->checkJobDone())
+            if (!wsEvThreads[i].checkJobDone())
             {
                 areJobsDone = areJobsDone && 0;
             }
@@ -363,9 +398,7 @@ public:
         printMessage(0,"Stopping threads..\n");
         for (int i = 0; i < wsEvThreads.size(); i++)
         {
-            wsEvThreads[i]->stop();
-            delete wsEvThreads[i];
-            wsEvThreads[i]=0;
+            wsEvThreads[i].stop();
         }
 
         if (arm)
@@ -384,7 +417,7 @@ public:
 
     double getPeriod()
     {
-        return 0.5;
+        return 0.25;
     }
 };
 
