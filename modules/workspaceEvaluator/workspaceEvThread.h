@@ -55,14 +55,16 @@ class workspaceEvThread: public RateThread
 protected:
     /***************************************************************************/
     // EXTERNAL VARIABLES: change them from command line or through .ini file
+    string name;              // Name of the thread
+    string eval_mode;         // Evaluation mode
+    string expl_mode;         // Exploration mode
+    string outputFile;        // Output file
+
     // Flag that manages verbosity (v=1 -> more text printed out; v=2 -> even more text):
     int verbosity;
-    // Name of the thread:
-    string name;
-    // Rate of the thread:
-    double rate;
-    // Translational Tolerance:   
-    double XYZTol;
+
+    double rate;              // Rate of the thread
+    double XYZTol;            // Translational Tolerance
 
     /***************************************************************************/
     // INTERNAL VARIABLES:
@@ -70,12 +72,12 @@ protected:
     int    step;                    // Counter that manages the state machine
     bool   isJobDone;
     string homePath;
-    string outputFile;
+    
 
     iKinChain     chain;
     iKinIpOptMin *slv;
 
-    vector<Vector> poss2Expl;
+    vector<Vector> explVec;
     vector<double> reachability;
 
     /**
@@ -134,11 +136,11 @@ public:
     iKinChain getChain() const { return chain; };
     double getRate()     const { return rate; };
     double getXYZTol()   const { return XYZTol; };
-    double getAdvancement()    { return 100.0*cnt/poss2Expl.size(); };
+    double getAdvancement()    { return 100.0*cnt/explVec.size(); };
 
     string getOutputFile() const { return outputFile; };
 
-    vector<Vector> getPoss2Expl() const { return poss2Expl; };
+    vector<Vector> getExplVec() const { return explVec; };
 };
 
 #endif

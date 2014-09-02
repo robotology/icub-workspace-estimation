@@ -64,16 +64,20 @@ private:
     string name;
     double rate;
     int    verbosity;
-    bool   isJobDone;
+    
     double granP;
+    int    resolJ;
+
     double XYZTol;
+    bool   isJobDone;
     int    threadsNum;
 
     string src_mode;
-    string homePath;
+    string eval_mode;
+    string expl_mode;
+
     string outputFile;
     string DH_file;
-    string URDF_file;
 
     Matrix wsLims;
 
@@ -81,7 +85,7 @@ private:
     iKinLimb     *limb;      // This is used if src_mode=="DH" || src_mode=="URDF"
     iKinChain    *chain;
 
-    vector<Vector> poss2Expl;
+    vector<Vector> explVec;
     vector<double> reachability;
 
 public:
@@ -89,16 +93,23 @@ public:
     {
         arm        = 0;
         limb       = 0;
+        chain      = 0;
         isJobDone  = 0;
-        name       = "workspaceEvaluator"; // name
-        verbosity  = 0;                    // verbosity
-        rate       = 0.5;                  // rate
-        granP      = 0.01;                 // spatial granularity
-        XYZTol     = 5e-3;                 // translational tolerance
-        src_mode   = "test";               // src_mode
-        DH_file    = "DH.ini";
-        URDF_file  = "URDF.xml";
-        threadsNum = 1;
+
+        name       = "wrkspcExpl";        // name
+        rate       = 50;                  // rate
+        verbosity  = 0;                   // verbosity
+
+        granP      = 0.04;                // spatial granularity
+        resolJ     = 10;                  // joint space resolution
+
+        src_mode   = "test";              // src_mode
+        eval_mode  = "manipulabilty";     // evaluation mode
+        expl_mode  = "operational_space"; // exploration mode
+
+        XYZTol     = 5e-3;                // translational tolerance
+        DH_file    = "DH.ini";            // DH_file
+        threadsNum = 1;                   // number of threads
 
         // These are the limits of the exploration of the workspace, defined as a 3x2 matrix
         // wsLims = [minX maxX; minY maxY; minZ maxZ]
@@ -129,7 +140,7 @@ public:
                     return true;
                 }
                 //-----------------
-                case VOCAB4('a','d','v','a'):
+                case VOCAB4('s','t','a','t'):
                 {
                     double avgAdvancement=0.0;
                     for (int i = 0; i < wsEvThreads.size(); i++)
@@ -173,15 +184,76 @@ public:
                 rate = rf.find("rate").asInt()/1000;
                 printMessage(0,"Module working at %gs\n", rate);
             }
-            else printMessage(0,"Could not find rate in the config file; using %gs as default.\n",rate);
+            else printMessage(0,"Could not find \'rate\' in the config file; using %gs as default.\n",rate);
+
+
+        //******************** SOURCE_MODE *********************
+            if (rf.check("src_mode"))
+            {
+                if (rf.find("src_mode").asString() == "test" || rf.find("src_mode").asString() == "DH")// || rf.find("src_mode").asString() == "URDF")
+                {
+                    src_mode = rf.find("src_mode").asString();
+                    printMessage(0,"src_mode set to %s\n",src_mode.c_str());
+                }
+                else printMessage(0,"src_mode option found but not allowed; using %s as default.\n",src_mode.c_str());
+            }
+            else printMessage(0,"Could not find \'src_mode\' in the config file; using %s as default.\n",src_mode.c_str());
+
+        //********************** DH_FILE ***********************
+            if (src_mode == "DH")
+            {        
+                if (rf.check("DH_file"))
+                {
+                    DH_file = rf.find("DH_file").asString();
+                    printMessage(0,"DH_file set to %s\n",DH_file.c_str());
+                }
+                else printMessage(0,"Could not find \'DH_file\' in the config file; using %s as default.\n",DH_file.c_str());
+            }
+
+        //**************** EVALUATION_MODE *********************
+            if (rf.check("eval_mode"))
+            {
+                if (rf.find("eval_mode").asString() == "manipulability" || rf.find("eval_mode").asString() == "binary")// || rf.find("eval_mode").asString() == "orientation")
+                {
+                    eval_mode = rf.find("eval_mode").asString();
+                    printMessage(0,"eval_mode set to %s\n",eval_mode.c_str());
+                }
+                else printMessage(0,"eval_mode option found but not allowed; using %s as default.\n",eval_mode.c_str());
+            }
+            else printMessage(0,"Could not find \'eval_mode\' in the config file; using %s as default.\n",eval_mode.c_str());
+
+        //*************** EXPLORATION_MODE *********************
+            if (rf.check("expl_mode"))
+            {
+                if (rf.find("expl_mode").asString() == "joint_space" || rf.find("expl_mode").asString() == "operational_space")
+                {
+                    expl_mode = rf.find("expl_mode").asString();
+                    printMessage(0,"expl_mode set to %s\n",expl_mode.c_str());
+                }
+                else printMessage(0,"expl_mode option found but not allowed; using %s as default.\n",expl_mode.c_str());
+            }
+            else printMessage(0,"Could not find \'expl_mode\' in the config file; using %s as default.\n",expl_mode.c_str());
+
 
         //**************** SPATIAL GRANULARITY *****************
-            if (rf.check("granP"))
-            {
-                granP = rf.find("granP").asDouble();
-                printMessage(0,"Granularity will be %g[m]\n", granP);
+            if (expl_mode == "operational_space")
+            {        
+                if (rf.check("granP"))
+                {
+                    granP = rf.find("granP").asDouble();
+                    printMessage(0,"Granularity will be %g[m]\n", granP);
+                }
+                else printMessage(0,"Could not find \'granP\' in the config file; using %g as default.\n",granP);
             }
-            else printMessage(0,"Could not find granP in the config file; using %g as default.\n",granP);
+            else if (expl_mode == "joint_space")
+            {        
+                if (rf.check("resolJ"))
+                {
+                    resolJ = rf.find("resolJ").asDouble();
+                    printMessage(0,"Granularity will be %g[m]\n", resolJ);
+                }
+                else printMessage(0,"Could not find \'resolJ\' in the config file; using %g as default.\n",resolJ);
+            }
 
         //************** TRANSLATIONAL TOLERANCE ***************
             if (rf.check("XYZTol"))
@@ -207,42 +279,8 @@ public:
             }
             else printMessage(0,"Could not find threadsNum option in config file; using %i as default.\n",threadsNum);
 
-        //******************** SOURCE_MODE *********************
-            if (rf.check("src_mode"))
-            {
-                if (rf.find("src_mode").asString() == "test" || rf.find("src_mode").asString() == "DH")// || rf.find("src_mode").asString() == "URDF")
-                {
-                    src_mode = rf.find("src_mode").asString();
-                    printMessage(0,"src_mode set to %s\n",src_mode.c_str());
-                }
-                else printMessage(0,"src_mode option found but not allowed; using %s as default.\n",src_mode.c_str());
-            }
-            else printMessage(0,"Could not find src_mode option in the config file; using %s as default.\n",src_mode.c_str());
-
-        //********************** DH_FILE ***********************
-            if (src_mode == "DH")
-            {        
-                if (rf.check("DH_file"))
-                {
-                    DH_file = rf.find("DH_file").asString();
-                    printMessage(0,"DH_file set to %s\n",DH_file.c_str());
-                }
-                else printMessage(0,"Could not find DH_file option in the config file; using %s as default.\n",DH_file.c_str());
-            }
-
-        //********************* URDF_FILE **********************
-            if (src_mode == "URDF")
-            {        
-                if (rf.check("URDF_file"))
-                {
-                    URDF_file = rf.find("URDF_file").asString();
-                    printMessage(0,"URDF_file set to %s\n",URDF_file.c_str());
-                }
-                else printMessage(0,"Could not find URDF_file option in the config file; using %s as default.\n",URDF_file.c_str());
-            }
-
         //******************** OUTPUT_FILE *********************
-            homePath = rf.getHomeContextPath().c_str();
+            string homePath = rf.getHomeContextPath().c_str();
             homePath = homePath+"/";
             outputFile = rf.check("outputFile", Value("output.ini")).asString().c_str();
             printMessage(0,"Storing file set to: %s\n", (homePath+outputFile).c_str());
@@ -260,7 +298,7 @@ public:
                 string threadOutputFile = homePath+outputFile + "_" + int_to_string(i);
                 iKinChain _chain(*chain);
                 wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,XYZTol,
-                                                        _chain,poss2Expl,threadOutputFile));
+                                                        _chain,explVec,threadOutputFile));
                 printMessage(2,"Thread %i instantiated.\n",i);
             }
             printMessage(0,"workspaceEvThreads have been istantiated...\n");
@@ -304,14 +342,17 @@ public:
             }
             else
             {
-                wsLims(0,0) = -0.5;                wsLims(0,1) =  0.1;
-                wsLims(1,0) = -0.6;                wsLims(1,1) =  0.6;
-                wsLims(2,0) = -0.3;                wsLims(2,1) =  0.7;
+                wsLims(0,0) = -0.7;                wsLims(0,1) =  0.1;
+                wsLims(1,0) = -0.7;                wsLims(1,1) =  0.7;
+                wsLims(2,0) = -0.4;                wsLims(2,1) =  0.8;
             }
             printMessage(0,"Workspace Limits set to: \n%s\n",wsLims.toString(3,3).c_str());
 
-        //******** POSITIONS 2 EXPLORE ************
-            // Populate the vector of positions in order for it to be used later
+        //******** EXPLORATION VECTOR ************
+            // Populate the exploration vector in order for it to be used later
+            // Its population is eval_mode dependent!
+            //    If eval_mode == operational_space, explVec == 3D points to explore
+            //    If eval_mode == joint_space, explVec == ND joint angles to explore
             printMessage(0,"Populating the vectors..\n");
             Vector p(3,0.0);
             for (double i = wsLims(0,0); i <= wsLims(0,1); i=i+granP)
@@ -323,8 +364,8 @@ public:
                         p(0)=i;
                         p(1)=j;
                         p(2)=k;
-                        printMessage(4,"poss2Expl: %s\n",p.toString(3,3).c_str());
-                        poss2Expl.push_back(p);
+                        printMessage(4,"explVec: %s\n",p.toString(3,3).c_str());
+                        explVec.push_back(p);
                         reachability.push_back(0.0);
                     }
                 }
@@ -335,8 +376,9 @@ public:
     }
 
     /**
-     * Configures the chain according to the src_mode. It can be either a test chain (a classical iCubArm left),
-     * a DH file, or an URDF file. After this, it instantiates a proper iKinIpOptMin solver.
+     * Configures the chain according to the src_mode. It can be either a test chain
+     * (a classical iCubArm left), or a custom DH file.
+     * After this, it instantiates a proper iKinIpOptMin solver.
      * @return true/false if success/failure
      */
     bool configureInvKin()
@@ -346,7 +388,7 @@ public:
             arm   = new iCubArm("left");
             chain = arm->asChain();
 
-            // Relase torso joints since we want to explore as much workspace as possible
+            // Release torso joints since we want to explore as much workspace as possible
             chain->releaseLink(0);
             chain->releaseLink(1);
             chain->releaseLink(2);
@@ -361,7 +403,7 @@ public:
             limb=new iKinLimb(linksOptions);
             chain = limb->asChain();
         }
-        else if (src_mode == "URDF")
+        else
         {
             return false;
         }
@@ -458,17 +500,23 @@ int main(int argc, char * argv[])
         cout<<"   --from       from:   the name of the .ini file (default workspaceEvaluator.ini)."<<endl;
         cout<<"   --name       name:   the name of the module (default workspaceEvaluator)."<<endl;
         cout<<"   --verbosity  int:    verbosity level (default 0)."<<endl;
-        cout<<"   --rate       int:    the period used by the module. Default 500ms."<<endl;
-        cout<<"   --granP      double: the spatial granularity of the workspace exploration. Default 1cm."<<endl;
+        cout<<"   --rate       int:    the period used by the thread. Default 50ms."<<endl;
         cout<<"   --XYZTol     double: the translational tolerance used to assess if a point in the workspace has"<<endl;
         cout<<"                        been reached. Default 5e-3m"<<endl;
         cout<<"   --src_mode   mode:   source to use finding the chain (either test, DH, or URDF; default test)."<<endl;
         cout<<"                        NOTE:"<<endl;
         cout<<"                          \'test\' creates a right iCubArm and tests the software on it;"<<endl;
         cout<<"                          \'DH\'   needs a proper DH.ini with the chain in DH convention;"<<endl;
-        cout<<"                          \'URDF\' needs a proper URDF file."<<endl;
+        cout<<"   --eval_mode  mode:   Evaluation mode put in place. It can be:"<<endl;
+        cout<<"                          \'binary\' "<<endl;
+        cout<<"                          \'manipulability\' "<<endl;
+        cout<<"                          \'orientation\' "<<endl;
+        cout<<"   --expl_mode  mode:   Exploration mode put in place. It can be:"<<endl;
+        cout<<"                          \'joint_space\' "<<endl;
+        cout<<"                          \'operational_space\' "<<endl;
+        cout<<"   --granP      double: spatial granularity of the operational_space exploration. Default 4cm."<<endl;
+        cout<<"   --resolJ     int:    number of configurations explored by each joint in joint_space exploration. Default 20."<<endl;
         cout<<"   --DH_file    string: DH.ini file to be used alongside the \'DH\' src_mode."<<endl;
-        cout<<"   --URDF_file  string: URDF   file to be used alongside the \'URDF\' src_mode."<<endl;
         cout<<endl;
         return 0;
     }

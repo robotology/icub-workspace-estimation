@@ -6,8 +6,8 @@ workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT,
                                      RateThread(_rate), verbosity(_v), name(_n),
                                      XYZTol(_tT), outputFile(_oF), rate(_rate)
 {
-    poss2Expl = _p2E;
-    chain = _c;
+    explVec = _p2E;
+    chain   = _c;
     printMessage(0,"normalConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
 }
 
@@ -17,8 +17,8 @@ workspaceEvThread::workspaceEvThread(const workspaceEvThread &_wET):
                                      XYZTol(_wET.getXYZTol()),
                                      outputFile(_wET.getOutputFile())
 {
-    chain     = _wET.getChain();
-    poss2Expl = _wET.getPoss2Expl();
+    chain   = _wET.getChain();
+    explVec = _wET.getExplVec();
 
     printMessage(0,"copyConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
 }
@@ -31,12 +31,12 @@ bool workspaceEvThread::threadInit()
 
     slv = new iKinIpOptMin(chain,IKINCTRL_POSE_XYZ,1e-8,200);
 
-    for (int i = 0; i < poss2Expl.size(); i++)
+    for (int i = 0; i < explVec.size(); i++)
     {
-        reachability.push_back(0.0);
+        reachability.push_back(-1.0);
     }
 
-    printMessage(0,"threadInit name %s #poss2Expl %i\n",name.c_str(),poss2Expl.size());
+    printMessage(0,"threadInit name %s #explVec %i\n",name.c_str(),explVec.size());
 
     return true;
 }
@@ -74,7 +74,7 @@ bool workspaceEvThread::exploreWorkspace()
     Vector posObt(3,0.0);    // 3D position    that have been actually obtained
     Vector poseObt(7,0.0);   // 7D full pose   that have been actually obtained
 
-    pos2Expl = poss2Expl[cnt];
+    pos2Expl = explVec[cnt];
 
     printMessage(2,"Advancement: %g\tExploring %s starting from %s..\n",pos2Expl.toString(3,3).c_str(),
                     getAdvancement(),chain.getAng().toString(3,3).c_str());
@@ -97,7 +97,7 @@ bool workspaceEvThread::exploreWorkspace()
     }
 
     cnt++;
-    if (cnt==poss2Expl.size())
+    if (cnt==explVec.size())
     {
         isJobDone=1;
     }
@@ -136,12 +136,12 @@ bool workspaceEvThread::saveWorkspace()
 
     if (myfile.is_open())
     {
-        for (int i = 0; i < poss2Expl.size(); i++)
+        for (int i = 0; i < explVec.size(); i++)
         {
             data.clear();
-            data.addDouble(poss2Expl[i](0));
-            data.addDouble(poss2Expl[i](1));
-            data.addDouble(poss2Expl[i](2));
+            data.addDouble(explVec[i](0));
+            data.addDouble(explVec[i](1));
+            data.addDouble(explVec[i](2));
             data.addDouble(reachability[i]);
             myfile << data.toString() << endl;
         }
