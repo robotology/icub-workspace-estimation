@@ -101,7 +101,7 @@ public:
         verbosity  = 0;                   // verbosity
 
         granP      = 0.04;                // spatial granularity
-        resolJ     = 10;                  // joint space resolution
+        resolJ     = 4;                   // joint space resolution
 
         src_mode   = "test";              // src_mode
         eval_mode  = "manipulabilty";     // evaluation mode
@@ -298,7 +298,8 @@ public:
                 string threadOutputFile = homePath+outputFile + "_" + int_to_string(i);
                 iKinChain _chain(*chain);
                 wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,XYZTol,
-                                                        _chain,explVec,threadOutputFile));
+                                                        _chain,explVec,threadOutputFile,
+                                                        eval_mode,expl_mode));
                 printMessage(2,"Thread %i instantiated.\n",i);
             }
             printMessage(0,"workspaceEvThreads have been istantiated...\n");

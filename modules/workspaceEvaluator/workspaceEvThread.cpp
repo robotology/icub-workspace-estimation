@@ -2,9 +2,10 @@
 
 workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT,
                                      const iKinChain &_c, const vector<Vector> &_p2E,
-                                     string _oF) :
+                                     string _oF, string _eVM, string _eXM) :
                                      RateThread(_rate), verbosity(_v), name(_n),
-                                     XYZTol(_tT), outputFile(_oF), rate(_rate)
+                                     XYZTol(_tT), outputFile(_oF), rate(_rate),
+                                     eval_mode(_eVM), expl_mode(_eXM)
 {
     explVec = _p2E;
     chain   = _c;
@@ -15,7 +16,8 @@ workspaceEvThread::workspaceEvThread(const workspaceEvThread &_wET):
                                      RateThread(_wET.getRate()), rate(_wET.getRate()),
                                      verbosity(_wET.getVerbosity()),name(_wET.getName()),
                                      XYZTol(_wET.getXYZTol()),
-                                     outputFile(_wET.getOutputFile())
+                                     outputFile(_wET.getOutputFile()),
+                                     eval_mode(_wET.getEvalMode()),expl_mode(_wET.getExplMode())
 {
     chain   = _wET.getChain();
     explVec = _wET.getExplVec();

@@ -71,8 +71,6 @@ protected:
     int    cnt;                     // Counter that handles the cycling through the positions
     int    step;                    // Counter that manages the state machine
     bool   isJobDone;
-    string homePath;
-    
 
     iKinChain     chain;
     iKinIpOptMin *slv;
@@ -104,7 +102,7 @@ public:
     // CONSTRUCTOR
     workspaceEvThread(int _rate, int _v, string _n, double _tT,
                       const iKinChain &_c, const vector<Vector> &_p2E,
-                      string _oF);
+                      string _oF, string _eVM, string _eXM);
 
     // COPY CONSTRUCTOR
     workspaceEvThread(const workspaceEvThread &_wET);
@@ -141,6 +139,8 @@ public:
     string getOutputFile() const { return outputFile; };
 
     vector<Vector> getExplVec() const { return explVec; };
+    string getEvalMode() const { return eval_mode; };
+    string getExplMode() const { return expl_mode; };
 };
 
 #endif
