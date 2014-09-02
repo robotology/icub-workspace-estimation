@@ -7,8 +7,13 @@
 % generate a function instead of a script.
 
 %% Initialize variables.
-filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
+% filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
 % filename = '../app/conf/output.ini';
+
+if ~exist('filename','var')
+    filename = './output.ini';
+end
+
 delimiter = ' ';
 
 %% Format string for each line of text:
@@ -16,7 +21,8 @@ formatSpec = '%f%f%f%f%[^\n\r]';
 
 %% Open the text file.
 fileID = fopen(filename,'r');
-dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,  'ReturnOnError', false);
+% dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,'HeaderLines' ,startRow-1,  'ReturnOnError', false);
+dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'ReturnOnError', false);
 fclose(fileID);
 
 %% Post processing for unimportable data.
@@ -27,34 +33,59 @@ fclose(fileID);
 
 %% Create output variable
 data = [dataArray{1:end-1}];
+% data(isnan(data)) = 0.0;
 %% Clear temporary variables
-clearvars filename delimiter formatSpec fileID dataArray ans;
+clearvars delimiter formatSpec fileID dataArray ans;
 
-figure;
+figure('Position',[100 100 1000 800],'Color','white');
 hold on; grid on; view(3);
 
 xlabel('x')
 ylabel('y')
 zlabel('z')
 
-axis([-0.5,0.2,-0.5,0.5,-0.2,0.6]);
+axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
 axis equal;
 
-rP=find(data(:,4)~=0);
+rP=find(data(:,4)~=0 & data(:,4)~=-1);
 reachedPts = data(rP,:);
+reachedPts(isnan(reachedPts)) = 0.0;
+
+% Sort the reached points according to the manipulability
+[Y,idx]=sort(reachedPts(:,4));
+reachedPts=reachedPts(idx,:);
+
+% Decompose the matrix
+numSplits = 20;
+l = int16(linspace(1,size(reachedPts,1),numSplits+1));
+
 x = reachedPts(:,1);
 y = reachedPts(:,2);
 z = reachedPts(:,3);
 c = reachedPts(:,4);
-
-% Plot only the surface of the points under evaluation.
 K = convhull(x,y,z);
-trisurf(K,x,y,z,c,'facealpha',0.5);
-colormap('summer');
+h = trisurf(K,x,y,z,c,'facealpha',0.5);
+shading interp;
+set(h,'Visible','Off');
 colorbar;
 
-% scatter3(reachedPts(:,1),reachedPts(:,2),reachedPts(:,3),12,reachedPts(:,4),'.');
+for i = numSplits:-1:1
+    x = reachedPts(l(i):l(i+1),1);
+    y = reachedPts(l(i):l(i+1),2);
+    z = reachedPts(l(i):l(i+1),3);
+    c = reachedPts(l(i):l(i+1),4);
+    K = convhull(x,y,z);
+    trisurf(K,x,y,z,c,'facealpha',0.7);
+    shading interp;
+    % scatter3(reachedPts(l(i):l(i+1),1),reachedPts(l(i):l(i+1),2),reachedPts(l(i):l(i+1),3),40,reachedPts(l(i):l(i+1),4),'fill');
+    pause(0.5);
+end
 
+% Plot only the surface of the points under evaluation.
+% K = convhull(x,y,z);
+% trisurf(K,x,y,z,c,'facealpha',0.5);
+
+% colormap('summer');
 drawRefFrame(eye(4),0.6);
 
-clear i x y z c rP ans;
+clear i x y z c rP ans Y idx;
