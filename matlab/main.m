@@ -11,7 +11,7 @@
 % filename = '../app/conf/output.ini';
 
 if ~exist('filename','var')
-    filename = './output.ini';
+    filename = '../app/conf/output.ini';
 end
 
 delimiter = ' ';
@@ -24,12 +24,6 @@ fileID = fopen(filename,'r');
 % dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,'HeaderLines' ,startRow-1,  'ReturnOnError', false);
 dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'ReturnOnError', false);
 fclose(fileID);
-
-%% Post processing for unimportable data.
-% No unimportable data rules were applied during the import, so no post
-% processing code is included. To generate code which works for
-% unimportable data, select unimportable cells in a file and regenerate the
-% script.
 
 %% Create output variable
 data = [dataArray{1:end-1}];
@@ -46,6 +40,7 @@ zlabel('z')
 
 axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
 axis equal;
+drawRefFrame(eye(4),0.6);
 
 rP=find(data(:,4)~=0 & data(:,4)~=-1);
 reachedPts = data(rP,:);
@@ -56,7 +51,7 @@ reachedPts(isnan(reachedPts)) = 0.0;
 reachedPts=reachedPts(idx,:);
 
 % Decompose the matrix
-numSplits = 20;
+numSplits = 200;
 l = int16(linspace(1,size(reachedPts,1),numSplits+1));
 
 x = reachedPts(:,1);
@@ -69,16 +64,28 @@ shading interp;
 set(h,'Visible','Off');
 colorbar;
 
+% Create custom colormaps:
+    M = [0,0;1,1;];
+    MR=[0,0; 0.02,0.3; 0.3,1; 1,1];
+    MG=[0,0;  0.3,0;   0.7,1; 1,1];
+    MB=[0,0;  0.7,0;          1,1];
+    simplegray = colormapRGBmatrices(length(c), M, M, M);
+    hot2 = colormapRGBmatrices(length(c),MR,MG,MB);
+    bluehot = colormapRGBmatrices(length(c),MB,MG,MR);
+    colormap(bluehot)
+    clear simplegray hot2
+
+% Split the workspace in #numSplit different surfaces and draw them over the time
 for i = numSplits:-1:1
     x = reachedPts(l(i):l(i+1),1);
     y = reachedPts(l(i):l(i+1),2);
     z = reachedPts(l(i):l(i+1),3);
-    c = reachedPts(l(i):l(i+1),4);
+    c = bluehot(l(i):l(i+1),:);
     K = convhull(x,y,z);
-    trisurf(K,x,y,z,c,'facealpha',0.7);
-    shading interp;
-    % scatter3(reachedPts(l(i):l(i+1),1),reachedPts(l(i):l(i+1),2),reachedPts(l(i):l(i+1),3),40,reachedPts(l(i):l(i+1),4),'fill');
-    pause(0.5);
+    % trisurf(K,x,y,z,c,'facealpha',0.7);
+    % shading interp;
+    scatter3(x,y,z,40,c,'fill');
+    pause(0.0125);
 end
 
 % Plot only the surface of the points under evaluation.
@@ -86,6 +93,6 @@ end
 % trisurf(K,x,y,z,c,'facealpha',0.5);
 
 % colormap('summer');
-drawRefFrame(eye(4),0.6);
+
 
 clear i x y z c rP ans Y idx;
