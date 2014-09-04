@@ -10,8 +10,15 @@
 % filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
 % filename = '../app/conf/output.ini';
 
-if ~exist('filename','var')
-    filename = '../app/conf/output.ini';
+
+filename = '../app/conf/output.ini';
+if nargin>1
+    filename=varargin{1};
+end
+    
+videoOn=false;
+if nargin>2
+    videoOn=varargin{2};
 end
 
 delimiter = ' ';
@@ -63,6 +70,7 @@ h = trisurf(K,x,y,z,c,'facealpha',0.5);
 shading interp;
 set(h,'Visible','Off');
 colorbar;
+caxis([min(c) max(c)]);
 
 % Create custom colormaps:
     M = [0,0;1,1;];
