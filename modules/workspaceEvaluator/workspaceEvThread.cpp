@@ -194,19 +194,19 @@ bool workspaceEvThread::saveWorkspace()
         for (int i = 0; i < explVec.size(); i++)
         {
             data.clear();
-            // Round the doubles to the mm before saving:
+            // Round the doubles to the cm before saving:
             for (int j = 0; j < 3; j++)
             {
                 double tmp  = explVec[i][j];
-                double tmp2 = tmp*1000.0;
+                double tmp2 = tmp*100.0;
 
                 if (tmp-floor(tmp)>=0.5)
                 {
-                    data.addDouble(ceil(tmp2)/1000.0);
+                    data.addDouble(ceil(tmp2)/100.0);
                 }
                 else
                 {
-                    data.addDouble(floor(tmp2)/1000.0);
+                    data.addDouble(floor(tmp2)/100.0);
                 }
             }
 

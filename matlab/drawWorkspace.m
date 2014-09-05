@@ -76,12 +76,12 @@ function [reachedPts,filename] = drawWorkspace(varargin)
     reachedPts = data(rP,:);
     reachedPts(isnan(reachedPts)) = 0.0;
 
-    % Sort the reached points according to the manipulability
-    [Y,idx]=sort(reachedPts(:,4));
+    % Remove duplicates in order to fasten up the drawing
+    [Y idx ida]=unique(reachedPts(:,1:3),'rows');
     reachedPts=reachedPts(idx,:);
 
-    % Remove duplicates in order to fasten up the drawing
-    [Y idx]=unique(reachedPts(:,1:3),'rows');
+    % Sort the reached points according to the manipulability
+    [Y,idx]=sort(reachedPts(:,4));
     reachedPts=reachedPts(idx,:);
 
     % Decompose the matrix
