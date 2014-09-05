@@ -55,17 +55,14 @@ void workspaceEvThread::run()
             step++;
             break;
         case 1:
-            if (!isJobDone)
-            {       
-                exploreWorkSpace();
-            }
-            else
-            {
-                printMessage(0,"FINISHED.\n");
-                timeEnd = yarp::os::Time::now();
-                printMessage(0,"Elapsed time: %g\n",timeEnd-timeStart);
-                step++;
-            }
+            exploreWorkSpace();
+            break;
+        case 2:
+            printMessage(0,"FINISHED.\n");
+            timeEnd = yarp::os::Time::now();
+            printMessage(0,"Elapsed time: %g\n",timeEnd-timeStart);
+            isJobDone=1;
+            step++;
             break;
         default:
             Time::delay(1);
@@ -118,7 +115,11 @@ bool workspaceEvThread::exploreJointSpace(const int &jnt)
         printMessage(jnt+1,(spaces+"Link #%i ang set to %g\n").c_str(),jnt,chain.getAng(jnt));  
         chain.setAng(jnt,chain.getAng(jnt)+increment);
     }
-    isJobDone=1;
+
+    if (cnt==pow(resolJ,chain.getN()))
+    {
+        step=2;
+    }
     return true;
 }
 
@@ -153,7 +154,7 @@ bool workspaceEvThread::exploreOperationalSpace()
     cnt++;
     if (cnt==explVec.size())
     {
-        isJobDone=1;
+        step++;
     }
 
     return true;
@@ -193,9 +194,22 @@ bool workspaceEvThread::saveWorkspace()
         for (int i = 0; i < explVec.size(); i++)
         {
             data.clear();
-            data.addDouble(explVec[i](0));
-            data.addDouble(explVec[i](1));
-            data.addDouble(explVec[i](2));
+            // Round the doubles to the mm before saving:
+            for (int j = 0; j < 3; j++)
+            {
+                double tmp  = explVec[i][j];
+                double tmp2 = tmp*1000.0;
+
+                if (tmp-floor(tmp)>=0.5)
+                {
+                    data.addDouble(ceil(tmp2)/1000.0);
+                }
+                else
+                {
+                    data.addDouble(floor(tmp2)/1000.0);
+                }
+            }
+
             data.addDouble(reachability[i]);
             myfile << data.toString() << endl;
         }

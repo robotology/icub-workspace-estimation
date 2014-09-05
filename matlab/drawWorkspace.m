@@ -31,9 +31,9 @@ function [reachedPts,filename] = drawWorkspace(varargin)
         end
 
         if drawSurfaces==true
-            numSplits = 100;
+            numSplits = 75;
         else
-            numSplits = 200;
+            numSplits = 150;
         end
 
         videoOn=false;
@@ -78,6 +78,10 @@ function [reachedPts,filename] = drawWorkspace(varargin)
 
     % Sort the reached points according to the manipulability
     [Y,idx]=sort(reachedPts(:,4));
+    reachedPts=reachedPts(idx,:);
+
+    % Remove duplicates in order to fasten up the drawing
+    [Y idx]=unique(reachedPts(:,1:3),'rows');
     reachedPts=reachedPts(idx,:);
 
     % Decompose the matrix
