@@ -2,27 +2,27 @@
 
 workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT,
                                      const iKinChain &_c, const vector<Vector> &_p2E,
-                                     string _oF, string _eVM, string _eXM) :
+                                     string _oF, string _eVM, string _eXM, int _rJ) :
                                      RateThread(_rate), verbosity(_v), name(_n),
                                      XYZTol(_tT), outputFile(_oF), rate(_rate),
-                                     eval_mode(_eVM), expl_mode(_eXM)
+                                     eval_mode(_eVM), expl_mode(_eXM), resolJ(_rJ)
 {
     explVec = _p2E;
     chain   = _c;
-    printMessage(0,"normalConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
+    printMessage(4,"normalConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
 }
 
 workspaceEvThread::workspaceEvThread(const workspaceEvThread &_wET):
                                      RateThread(_wET.getRate()), rate(_wET.getRate()),
                                      verbosity(_wET.getVerbosity()),name(_wET.getName()),
                                      XYZTol(_wET.getXYZTol()),
-                                     outputFile(_wET.getOutputFile()),
+                                     outputFile(_wET.getOutputFile()), resolJ(_wET.getResolJ()),
                                      eval_mode(_wET.getEvalMode()),expl_mode(_wET.getExplMode())
 {
     chain   = _wET.getChain();
     explVec = _wET.getExplVec();
 
-    printMessage(0,"copyConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
+    printMessage(4,"copyConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
 }
 
 bool workspaceEvThread::threadInit()
@@ -30,6 +30,8 @@ bool workspaceEvThread::threadInit()
     cnt       = 0;
     step      = 0;
     isJobDone = 0;
+    timeStart = 0;
+    timeEnd   = 0;
 
     slv = new iKinIpOptMin(chain,IKINCTRL_POSE_XYZ,1e-8,200);
 
@@ -48,29 +50,79 @@ void workspaceEvThread::run()
     switch (step)
     {
         case 0:
+            timeStart = yarp::os::Time::now();
             printMessage(0,"STARTING EXPLORATION...\n");
             step++;
             break;
         case 1:
             if (!isJobDone)
             {       
-                exploreWorkspace();
+                exploreWorkSpace();
             }
             else
             {
-                saveWorkspace();
+                printMessage(0,"FINISHED.\n");
+                timeEnd = yarp::os::Time::now();
+                printMessage(0,"Elapsed time: %g\n",timeEnd-timeStart);
                 step++;
             }
             break;
         default:
-            printMessage(0,"FINISHED.\n");
             Time::delay(1);
             break;
     }
 
 }
 
-bool workspaceEvThread::exploreWorkspace()
+bool workspaceEvThread::exploreWorkSpace()
+{
+    if (expl_mode == "operationalSpace")
+    {
+        return exploreOperationalSpace();
+    }
+    else if (expl_mode == "jointSpace")
+    {
+        return exploreJointSpace();
+    }
+    return false;
+}
+
+bool workspaceEvThread::exploreJointSpace(const int &jnt)
+{
+    double min = (chain)[jnt].getMin();
+    double max = (chain)[jnt].getMax();
+    double increment = (max-min)/(resolJ-1);
+
+    // The spaces are there in order to make some order into the printouts (otherwise its a mess)
+    string spaces="";
+    for (int i = 0; i < jnt; i++)
+    {
+        spaces += " ";
+    }
+    printMessage(jnt,(spaces+"Analyzing link #%i : min %g\tmax %g\tincrement %g\n").c_str(),jnt,min,max,increment);
+    chain.setAng(jnt,min);
+
+    while (chain.getAng(jnt) <= max+1e-5)
+    {
+        if (jnt+1 < chain.getN())
+        {
+            exploreJointSpace(jnt+1);
+        }
+        else
+        {
+            cnt++;
+            explVec.push_back(chain.getH().getCol(3).subVector(0,2));
+            reachability.push_back(computeManipulability());
+        }
+
+        printMessage(jnt+1,(spaces+"Link #%i ang set to %g\n").c_str(),jnt,chain.getAng(jnt));  
+        chain.setAng(jnt,chain.getAng(jnt)+increment);
+    }
+    isJobDone=1;
+    return true;
+}
+
+bool workspaceEvThread::exploreOperationalSpace()
 {
     Vector pos2Expl(3,0.0);  // 3D position    to explore
     Vector posObt(3,0.0);    // 3D position    that have been actually obtained
@@ -115,8 +167,8 @@ double workspaceEvThread::computeManipulability()
      */
     
     // Let's take only the positional components of the jacobian
-    Matrix J_a   = chain.AnaJacobian();
-    // Matrix J_a   = chain.GeoJacobian();
+    // Matrix J_a   = chain.AnaJacobian();
+    Matrix J_a   = chain.GeoJacobian();
 
     return sqrt(det(J_a * J_a.transposed()));
 }

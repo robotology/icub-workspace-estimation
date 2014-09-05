@@ -63,6 +63,8 @@ protected:
     // Flag that manages verbosity (v=1 -> more text printed out; v=2 -> even more text):
     int verbosity;
 
+    int    resolJ;            // Resolution in the joint space
+
     double rate;              // Rate of the thread
     double XYZTol;            // Translational Tolerance
 
@@ -71,6 +73,8 @@ protected:
     int    cnt;                     // Counter that handles the cycling through the positions
     int    step;                    // Counter that manages the state machine
     bool   isJobDone;
+    double timeStart;
+    double timeEnd;
 
     iKinChain     chain;
     iKinIpOptMin *slv;
@@ -83,7 +87,16 @@ protected:
      * @param  jnt the link from which the exploration starts (usually 0)
      * @return     true/false if success/failure
      */
-    bool exploreWorkspace();
+    bool exploreWorkSpace();
+
+    bool exploreOperationalSpace();
+
+    /**
+    * Explores the workspace by iteratively span all the joints and store the position into a suitable variable.
+    * @param jnt the link from which the exploration starts (usually 0)
+    * @return true/false if success/failure
+    */
+    bool exploreJointSpace(const int &jnt=0);
 
     /**
      * Computes the manipulability for the iKinChain to be stored into the reachability vector.
@@ -102,7 +115,7 @@ public:
     // CONSTRUCTOR
     workspaceEvThread(int _rate, int _v, string _n, double _tT,
                       const iKinChain &_c, const vector<Vector> &_p2E,
-                      string _oF, string _eVM, string _eXM);
+                      string _oF, string _eVM, string _eXM, int _rJ);
 
     // COPY CONSTRUCTOR
     workspaceEvThread(const workspaceEvThread &_wET);
@@ -141,6 +154,8 @@ public:
     vector<Vector> getExplVec() const { return explVec; };
     string getEvalMode() const { return eval_mode; };
     string getExplMode() const { return expl_mode; };
+
+    int getResolJ()      const { return resolJ; };
 };
 
 #endif

@@ -105,7 +105,7 @@ public:
 
         src_mode   = "test";              // src_mode
         eval_mode  = "manipulabilty";     // evaluation mode
-        expl_mode  = "operational_space"; // exploration mode
+        expl_mode  = "operationalSpace"; // exploration mode
 
         XYZTol     = 5e-3;                // translational tolerance
         DH_file    = "DH.ini";            // DH_file
@@ -225,7 +225,8 @@ public:
         //*************** EXPLORATION_MODE *********************
             if (rf.check("expl_mode"))
             {
-                if (rf.find("expl_mode").asString() == "joint_space" || rf.find("expl_mode").asString() == "operational_space")
+                if (rf.find("expl_mode").asString() == "jointSpace" ||
+                    rf.find("expl_mode").asString() == "operationalSpace")
                 {
                     expl_mode = rf.find("expl_mode").asString();
                     printMessage(0,"expl_mode set to %s\n",expl_mode.c_str());
@@ -235,8 +236,8 @@ public:
             else printMessage(0,"Could not find \'expl_mode\' in the config file; using %s as default.\n",expl_mode.c_str());
 
 
-        //**************** SPATIAL GRANULARITY *****************
-            if (expl_mode == "operational_space")
+        //**************** EXPL-DEPENDENT VARS *****************
+            if (expl_mode == "operationalSpace")
             {        
                 if (rf.check("granP"))
                 {
@@ -244,24 +245,24 @@ public:
                     printMessage(0,"Granularity will be %g[m]\n", granP);
                 }
                 else printMessage(0,"Could not find \'granP\' in the config file; using %g as default.\n",granP);
+
+                if (rf.check("XYZTol"))
+                {
+                    XYZTol = rf.find("XYZTol").asDouble();
+                    printMessage(0,"Translational tolerance will be %g \n", XYZTol);
+                }
+                else printMessage(0,"Could not find XYZTol in the config file; using %g as default.\n",XYZTol);
             }
-            else if (expl_mode == "joint_space")
+            else if (expl_mode == "jointSpace")
             {        
                 if (rf.check("resolJ"))
                 {
-                    resolJ = rf.find("resolJ").asDouble();
-                    printMessage(0,"Granularity will be %g[m]\n", resolJ);
+                    resolJ = rf.find("resolJ").asInt();
+                    printMessage(0,"Resolution in the joint space will be %i\n", resolJ);
                 }
                 else printMessage(0,"Could not find \'resolJ\' in the config file; using %g as default.\n",resolJ);
             }
 
-        //************** TRANSLATIONAL TOLERANCE ***************
-            if (rf.check("XYZTol"))
-            {
-                XYZTol = rf.find("XYZTol").asDouble();
-                printMessage(0,"Each joint will be divided into %g XYZTol\n", XYZTol);
-            }
-            else printMessage(0,"Could not find XYZTol in the config file; using %g as default.\n",XYZTol);
 
         //********************  VERBOSITY **********************
             if (rf.check("verbosity"))
@@ -283,7 +284,7 @@ public:
             string homePath = rf.getHomeContextPath().c_str();
             homePath = homePath+"/";
             outputFile = rf.check("outputFile", Value("output.ini")).asString().c_str();
-            printMessage(0,"Storing file set to: %s\n", (homePath+outputFile).c_str());
+            printMessage(0,"Output files set to: %s + %s*\n", homePath.c_str(),outputFile.c_str());
 
         //***************** INITIALIZE STUFF *******************
             if(!initVariables())      return false;
@@ -299,7 +300,7 @@ public:
                 iKinChain _chain(*chain);
                 wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,XYZTol,
                                                         _chain,explVec,threadOutputFile,
-                                                        eval_mode,expl_mode));
+                                                        eval_mode,expl_mode,resolJ));
                 printMessage(2,"Thread %i instantiated.\n",i);
             }
             printMessage(0,"workspaceEvThreads have been istantiated...\n");
@@ -308,7 +309,7 @@ public:
             {
                 printMessage(1,"Starting thread %i...\n",i);
                 wsEvThreads[i].start();
-                Time::delay(4);
+                // Time::delay(4);
                 printMessage(2,"Thread #i started.\n");
             }
             printMessage(0,"workspaceEvThreads have been started...\n");
@@ -327,7 +328,9 @@ public:
      */
     bool initVariables()
     {
-        //*********** WORKSPACE LIMITS ************
+        if (expl_mode=="operationalSpace")
+        {
+            //*********** WORKSPACE LIMITS ************
             Bottle &wl = rf.findGroup("WORKSPACE_LIMITS");
 
             if (!wl.isNull())
@@ -349,29 +352,34 @@ public:
             }
             printMessage(0,"Workspace Limits set to: \n%s\n",wsLims.toString(3,3).c_str());
 
-        //******** EXPLORATION VECTOR ************
+            //******** EXPLORATION VECTOR ************
             // Populate the exploration vector in order for it to be used later
-            // Its population is eval_mode dependent!
-            //    If eval_mode == operational_space, explVec == 3D points to explore
-            //    If eval_mode == joint_space, explVec == ND joint angles to explore
-            printMessage(0,"Populating the vectors..\n");
-            Vector p(3,0.0);
-            for (double i = wsLims(0,0); i <= wsLims(0,1); i=i+granP)
-            {
-                for (double j = wsLims(1,0); j <= wsLims(1,1); j=j+granP)
+            // Its population is expl_mode dependent!
+            //    If expl_mode == operationalSpace, explVec == 3D points to explore
+            //    If expl_mode == jointSpace, explVec == ND joint angles to explore
+                printMessage(0,"Populating the vectors..\n");
+                Vector p(3,0.0);
+                for (double i = wsLims(0,0); i <= wsLims(0,1); i=i+granP)
                 {
-                    for (double k = wsLims(2,0); k <= wsLims(2,1); k=k+granP)
+                    for (double j = wsLims(1,0); j <= wsLims(1,1); j=j+granP)
                     {
-                        p(0)=i;
-                        p(1)=j;
-                        p(2)=k;
-                        printMessage(4,"explVec: %s\n",p.toString(3,3).c_str());
-                        explVec.push_back(p);
-                        reachability.push_back(0.0);
+                        for (double k = wsLims(2,0); k <= wsLims(2,1); k=k+granP)
+                        {
+                            p(0)=i;
+                            p(1)=j;
+                            p(2)=k;
+                            printMessage(4,"explVec: %s\n",p.toString(3,3).c_str());
+                            explVec.push_back(p);
+                            reachability.push_back(0.0);
+                        }
                     }
                 }
-            }
-            printMessage(0,"Vectors have been populated!\n");
+                printMessage(0,"Vectors have been populated! Total number of points to be explored: %i\n",explVec.size());
+        }
+        else if (expl_mode=="jointSpace")
+        {
+            return true;
+        }
 
         return true;
     }
@@ -513,10 +521,10 @@ int main(int argc, char * argv[])
         cout<<"                          \'manipulability\' "<<endl;
         cout<<"                          \'orientation\' "<<endl;
         cout<<"   --expl_mode  mode:   Exploration mode put in place. It can be:"<<endl;
-        cout<<"                          \'joint_space\' "<<endl;
-        cout<<"                          \'operational_space\' "<<endl;
-        cout<<"   --granP      double: spatial granularity of the operational_space exploration. Default 4cm."<<endl;
-        cout<<"   --resolJ     int:    number of configurations explored by each joint in joint_space exploration. Default 20."<<endl;
+        cout<<"                          \'jointSpace\' "<<endl;
+        cout<<"                          \'operationalSpace\' "<<endl;
+        cout<<"   --granP      double: spatial granularity of the operationalSpace exploration. Default 4cm."<<endl;
+        cout<<"   --resolJ     int:    number of configurations explored by each joint in jointSpace exploration. Default 20."<<endl;
         cout<<"   --DH_file    string: DH.ini file to be used alongside the \'DH\' src_mode."<<endl;
         cout<<endl;
         return 0;
