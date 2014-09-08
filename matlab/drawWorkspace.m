@@ -1,4 +1,4 @@
-function [reachedPts,hfigure] = drawWorkspace(varargin)
+function [reachedPts,hgroup] = drawWorkspace(varargin)
 % Draw the workspace from a text file
 % Function for importing data from a proper output.ini file
 %
@@ -12,7 +12,7 @@ function [reachedPts,hfigure] = drawWorkspace(varargin)
 % OUTPUT:
 %   reachedPtS  -> an Nx4 array of reached 3D points + their manipulability index.
 %                  It has been ordered according to the magnitude of the manipulability (from low to high)
-%   hfigure     -> handle for the figure that has been drawn
+%   hgroup      -> handle for the surfaces that has been drawn
 
     %% Initialize variables according to input arguments
 
@@ -81,5 +81,5 @@ function [reachedPts,hfigure] = drawWorkspace(varargin)
     bluehot=flipud(bluehot);
     colormap(bluehot);
 
-    drawPointCloud(reachedPts,drawSurfaces,bluehot,videoOn);
+    hgroup = drawPointCloud(reachedPts,drawSurfaces,bluehot,videoOn);
 end

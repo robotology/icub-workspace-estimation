@@ -1,17 +1,29 @@
-function [crossedPts,cPts] = drawJointWorkspace(varargin)
-
+function [crossedPts,hgroup] = drawJointWorkspace(varargin)
 
     close all;
+    delete iCubWorkspace.avi;
+
+    videoOn = 0;
     if nargin>0
-        filenames=varargin{1};
-    else
-        filenames{1} = '../app/conf/output_right.ini';
-        filenames{2} = '../app/conf/output_left.ini';
+        videoOn = varargin{1};
     end
 
-    [reachedPts{1},hfigure{1}] = drawWorkspace(filenames{1},1,0);
+    if nargin>1
+        filenames=varargin{2};
+    else
+        filenames{1} = '../app/conf/output_left.ini';
+        filenames{2} = '../app/conf/output_right.ini';
+    end
+
+    [reachedPts{1},hgroup{1}] = drawWorkspace(filenames{1},1,videoOn);
+    hl = get(hgroup{1},'Children');% cb is handle of hggroup
+    set(hl,'FaceAlpha',0.01);
+    % set(hl,'Visible','Off');
+
     for i = 2:length(filenames)
-        [reachedPts{i},hfigure{i}] = drawWorkspace(filenames{i},1,0,hfigure{1});
+        [reachedPts{i},hgroup{i}] = drawWorkspace(filenames{i},1,videoOn+1);
+        hl = get(hgroup{i},'Children');% cb is handle of hggroup
+        set(hl,'FaceAlpha',0.01);
     end
 
     freezeColors
@@ -21,6 +33,7 @@ function [crossedPts,cPts] = drawJointWorkspace(varargin)
         B=reachedPts{2};
 
         crossedPts = intersectWorkspaces(A,B);
+        reachedPts{3} = crossedPts;
 
         [simplegray,bluehot,hot2] = colormapRGBmatrices(size(crossedPts,1));
         hot2 = flipud(hot2);
@@ -34,8 +47,10 @@ function [crossedPts,cPts] = drawJointWorkspace(varargin)
         % axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
         % axis equal;
         % drawRefFrame(eye(4),0.6);
-        drawPointCloud(crossedPts,1,hot2,0);
 
+
+        hgroup{3}=drawPointCloud(crossedPts,1,hot2,videoOn+2);
+        hl = get(hgroup{3},'Children');% cb is handle of hggroup
     end
 
     

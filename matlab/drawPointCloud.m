@@ -1,9 +1,11 @@
-function drawPointCloud(pC,dS,cM,vO)
+function handleGroup = drawPointCloud(pC,dS,cM,vO)
 
     reachedPts   = pC;
     drawSurfaces = dS;
     videoOn      = vO;
     cMap         = cM;
+
+    handleGroup  = hggroup;
 
     % Sort the reached points according to the manipulability
     [Y,idx]=sort(reachedPts(:,4));
@@ -17,10 +19,21 @@ function drawPointCloud(pC,dS,cM,vO)
     end
 
     %% Movie stuff
-        if videoOn
-            writerObj=VideoWriter('iCubWorkspace','Motion JPEG AVI','Quality',100);
-            writerObj.FrameRate=15;
-            open(writerObj);
+        if videoOn>0
+            if ~exist('iCubWorkspace.avi','file')
+                writerObj=VideoWriter('iCubWorkspace','Motion JPEG AVI');
+                writerObj.FrameRate=15;
+                open(writerObj);
+            else
+                readerObj=VideoReader('iCubWorkspace.avi');
+                writerObj=VideoWriter('iCubWorkspace2','Motion JPEG AVI');
+                writerObj.FrameRate=readerObj.FrameRate;
+                open(writerObj);
+                for i = 1:readerObj.NumberofFrames
+                    frame = read(readerObj,i);
+                    writeVideo(writerObj,frame);
+                end
+            end
         end
 
     % Decompose the matrix
@@ -31,13 +44,13 @@ function drawPointCloud(pC,dS,cM,vO)
     z = reachedPts(:,3);
     c = reachedPts(:,4);
     K = convhull(x,y,z);
-    h = trisurf(K,x,y,z,c,'FaceAlpha',0.03);
+    h = trisurf(K,x,y,z,c,'FaceAlpha',0.05);
     shading interp;
     set(h,'Visible','Off');
     colorbar;
     caxis([min(c) max(c)]);
 
-    if videoOn
+    if videoOn==1
         % Add 15 empty frames at the beginning in order to have ~1 sec of wait
         for i=1:15
             frame=getframe(gcf);
@@ -54,14 +67,15 @@ function drawPointCloud(pC,dS,cM,vO)
         if drawSurfaces==true
             c = reachedPts(l(i):l(i+1),4);
             K = convhull(x,y,z);
-            trisurf(K,x,y,z,c,'FaceAlpha',0.03);
+            h = trisurf(K,x,y,z,c,'FaceAlpha',0.05);
+            set(h,'Parent',handleGroup);
             shading interp;
         else
             c = cMap(l(i):l(i+1),:);
             scatter3(x,y,z,40,c,'fill');
         end
 
-        if videoOn
+        if videoOn>0
             frame=getframe(gcf);
             writeVideo(writerObj,frame);
         else
@@ -71,10 +85,16 @@ function drawPointCloud(pC,dS,cM,vO)
 
     if videoOn
         % Add 20 empty frames at the end in order to have ~2 sec of wait at the end
-        for i=1:15
-            writeVideo(writerObj,frame);
+        if videoOn==3
+            for i=1:15
+                writeVideo(writerObj,frame);
+            end
         end
         close(writerObj);
+
+        if exist('iCubWorkspace2.avi','file')
+            movefile('iCubWorkspace2.avi','iCubWorkspace.avi');
+        end
     end
 
     % Compute the volume of the point cloud
