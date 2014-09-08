@@ -202,6 +202,8 @@ bool workspaceEvThread::saveWorkspace()
     // Print some info on the test that has been done:
     myfile << "########################################################" << endl;
     myfile << "# src_mode  " << src_mode  << endl;
+    myfile << "# granP "     << granP     << endl;
+    myfile << "# resolJ "    << resolJ    << endl;
     myfile << "# eval_mode " << eval_mode << endl;
     myfile << "# expl_mode " << expl_mode << endl;
     myfile << "########################################################" << endl;
