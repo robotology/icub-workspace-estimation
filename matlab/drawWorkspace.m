@@ -18,7 +18,7 @@ function [reachedPts,filename] = drawWorkspace(varargin)
 
         % filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
         % filename = '../app/conf/output.ini';
-        filename = '../app/conf/output.ini';
+        filename = '../app/conf/output_right.ini';
         if nargin>0
             filename=varargin{1};
         end
@@ -41,6 +41,9 @@ function [reachedPts,filename] = drawWorkspace(varargin)
             videoOn=varargin{3};
         end
 
+        % Skip the first five lines of the output file
+        startRow=6;
+
     %% Process text file
         delimiter = ' ';
         % Format string for each line of text:
@@ -48,8 +51,8 @@ function [reachedPts,filename] = drawWorkspace(varargin)
 
         % Open the text file.
         fileID = fopen(filename,'r');
-        % dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,'HeaderLines' ,startRow-1,  'ReturnOnError', false);
-        dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'ReturnOnError', false);
+        dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true,'HeaderLines' ,startRow-1,  'ReturnOnError', false);
+        % dataArray = textscan(fileID, formatSpec, 'Delimiter', delimiter, 'MultipleDelimsAsOne', true, 'ReturnOnError', false);
         fclose(fileID);
 
         % Create output variable
