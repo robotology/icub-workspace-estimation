@@ -132,11 +132,28 @@ function [reachedPts,filename] = drawWorkspace(varargin)
         end
     end
 
-    % Plot only the surface of the points under evaluation.
-    % K = convhull(x,y,z);
-    % trisurf(K,x,y,z,c,'facealpha',0.5);
+    % Compute the volume of the point cloud
+    P = reachedPts(:,1:3)';
+    K = convhull(P');
+    K = unique(K(:));
+    Q = P(:,K);
+    [A, c] = MinVolEllipse(Q, .01);
+    % Ellipse_plot(A,c);
+    [U Q V] = svd(A);
+    radius(1) = 1/sqrt(Q(1,1));
+    radius(2) = 1/sqrt(Q(2,2));
+    radius(3) = 1/sqrt(Q(3,3));
+    vol = (4/3)*pi*sqrt(det(A^-1));
 
-    % colormap('summer');
+    % Prints out some statistics
+    disp('Workspace statistics:');
+    disp(sprintf('\tMin   (x,y,z): %g\t%g\t%g\t[m]',min(reachedPts(:,1:3))));
+    disp(sprintf('\tMax   (x,y,z): %g\t%g\t%g\t[m]',max(reachedPts(:,1:3))));
+    disp(sprintf('\tRadii (x,y,z): %g\t%g\t%g\t[m]',radius));
+    disp(sprintf('\tVolume:        %g\t[m^3]',vol));
+    disp('Manipulability statistics:');
+    disp(sprintf('\tMin: %g\t[m]',min(reachedPts(:,4))));
+    disp(sprintf('\tMax: %g\t[m]',max(reachedPts(:,4))));
 
     if videoOn
         close(writerObj);
