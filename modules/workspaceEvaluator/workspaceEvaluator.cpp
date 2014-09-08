@@ -81,7 +81,7 @@ private:
 
     Matrix wsLims;
 
-    iCubArm      *arm;       // This is used only if src_mode=="test"
+    iCubArm      *arm;       // This is used only if src_mode=="test_left" || src_mode=="test_right"
     iKinLimb     *limb;      // This is used if src_mode=="DH" || src_mode=="URDF"
     iKinChain    *chain;
 
@@ -103,9 +103,9 @@ public:
         granP      = 0.04;                // spatial granularity
         resolJ     = 4;                   // joint space resolution
 
-        src_mode   = "test";              // src_mode
+        src_mode   = "test_left";         // src_mode
         eval_mode  = "manipulabilty";     // evaluation mode
-        expl_mode  = "operationalSpace"; // exploration mode
+        expl_mode  = "operationalSpace";  // exploration mode
 
         XYZTol     = 5e-3;                // translational tolerance
         DH_file    = "DH.ini";            // DH_file
@@ -190,10 +190,15 @@ public:
         //******************** SOURCE_MODE *********************
             if (rf.check("src_mode"))
             {
-                if (rf.find("src_mode").asString() == "test" || rf.find("src_mode").asString() == "DH")// || rf.find("src_mode").asString() == "URDF")
+                if (rf.find("src_mode").asString() == "DH" ||
+                    rf.find("src_mode").asString() == "test_left" || rf.find("src_mode").asString() == "test_right")
                 {
                     src_mode = rf.find("src_mode").asString();
                     printMessage(0,"src_mode set to %s\n",src_mode.c_str());
+                }
+                else if (rf.find("src_mode").asString() == "test")
+                {
+                    src_mode = "test_left";
                 }
                 else printMessage(0,"src_mode option found but not allowed; using %s as default.\n",src_mode.c_str());
             }
@@ -300,7 +305,8 @@ public:
                 iKinChain _chain(*chain);
                 wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,XYZTol,
                                                         _chain,explVec,threadOutputFile,
-                                                        eval_mode,expl_mode,resolJ));
+                                                        src_mode, eval_mode,expl_mode,
+                                                        granP,resolJ));
                 printMessage(2,"Thread %i instantiated.\n",i);
             }
             printMessage(0,"workspaceEvThreads have been istantiated...\n");
@@ -392,9 +398,19 @@ public:
      */
     bool configureInvKin()
     {
-        if (src_mode == "test")
+        if (src_mode == "test_left")
         {
             arm   = new iCubArm("left");
+            chain = arm->asChain();
+
+            // Release torso joints since we want to explore as much workspace as possible
+            chain->releaseLink(0);
+            chain->releaseLink(1);
+            chain->releaseLink(2);
+        }
+        else if (src_mode == "test_right")
+        {
+            arm   = new iCubArm("right");
             chain = arm->asChain();
 
             // Release torso joints since we want to explore as much workspace as possible
@@ -514,7 +530,8 @@ int main(int argc, char * argv[])
         cout<<"                        been reached. Default 5e-3m"<<endl;
         cout<<"   --src_mode   mode:   source to use finding the chain (either test, DH, or URDF; default test)."<<endl;
         cout<<"                        NOTE:"<<endl;
-        cout<<"                          \'test\' creates a right iCubArm and tests the software on it;"<<endl;
+        cout<<"                          \'test_right\' creates a right iCubArm and tests the software on it;"<<endl;
+        cout<<"                          \'test_left\'  creates a left  iCubArm and tests the software on it;"<<endl;
         cout<<"                          \'DH\'   needs a proper DH.ini with the chain in DH convention;"<<endl;
         cout<<"   --eval_mode  mode:   Evaluation mode put in place. It can be:"<<endl;
         cout<<"                          \'binary\' "<<endl;

@@ -1,23 +1,24 @@
 #include "workspaceEvThread.h"
 
-workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT,
-                                     const iKinChain &_c, const vector<Vector> &_p2E,
-                                     string _oF, string _eVM, string _eXM, int _rJ) :
-                                     RateThread(_rate), verbosity(_v), name(_n),
-                                     XYZTol(_tT), outputFile(_oF), rate(_rate),
-                                     eval_mode(_eVM), expl_mode(_eXM), resolJ(_rJ)
+workspaceEvThread::workspaceEvThread(int _rate, int _v, string _n, double _tT, const iKinChain &_c,
+                                     const vector<Vector> &_p2E, string _oF, string _sM,
+                                     string _eVM, string _eXM, double _gP, int _rJ) :
+                                     RateThread(_rate), verbosity(_v), name(_n), XYZTol(_tT),
+                                     outputFile(_oF), rate(_rate), src_mode(_sM), eval_mode(_eVM),
+                                     expl_mode(_eXM), granP(_gP), resolJ(_rJ)
 {
     explVec = _p2E;
     chain   = _c;
     printMessage(4,"normalConstructor name %s chainDOF %i\n",name.c_str(),chain.getDOF());
 }
 
-workspaceEvThread::workspaceEvThread(const workspaceEvThread &_wET):
+workspaceEvThread::workspaceEvThread(const workspaceEvThread &_wET) :
                                      RateThread(_wET.getRate()), rate(_wET.getRate()),
-                                     verbosity(_wET.getVerbosity()),name(_wET.getName()),
-                                     XYZTol(_wET.getXYZTol()),
-                                     outputFile(_wET.getOutputFile()), resolJ(_wET.getResolJ()),
-                                     eval_mode(_wET.getEvalMode()),expl_mode(_wET.getExplMode())
+                                     verbosity(_wET.getVerbosity()), name(_wET.getName()),
+                                     XYZTol(_wET.getXYZTol()), outputFile(_wET.getOutputFile()),
+                                     src_mode(_wET.getSrcMode()), eval_mode(_wET.getEvalMode()),
+                                     expl_mode(_wET.getExplMode()), granP(_wET.getGranP()),
+                                     resolJ(_wET.getResolJ())
 {
     chain   = _wET.getChain();
     explVec = _wET.getExplVec();
@@ -157,6 +158,12 @@ bool workspaceEvThread::exploreOperationalSpace()
         step++;
     }
 
+    // Print something every 5% of advancement
+    if (int(getAdvancement()*1000)%5000 == 0)
+    {
+        printMessage(0,"Advancement: %g\n\n",getAdvancement());
+    }
+
     return true;
 }
 
@@ -176,18 +183,28 @@ double workspaceEvThread::computeManipulability()
 
 bool workspaceEvThread::saveWorkspace()
 {
-    printMessage(0,"SAVING EXPLORATION to %s\n",outputFile.c_str());
+    printMessage(0,"Saving exploration to %s\n",outputFile.c_str());
 
     int reached = 0;
     for (int i = 0; i < reachability.size(); i++)
     {
-        reached += bool(reachability[i]);
+        if (reachability[i]>= 0.0)
+        {
+            reached += 1;
+        }
     }
     printMessage(1,"Number of poses explored: %i\tNumber of poses reached: %i\n",
                     cnt,reached);
     Bottle data;
     ofstream myfile;
     myfile.open(outputFile.c_str(),ios::trunc);
+
+    // Print some info on the test that has been done:
+    myfile << "########################################################" << endl;
+    myfile << "# src_mode  " << src_mode << endl;
+    myfile << "# eval_mode " << src_mode << endl;
+    myfile << "# expl_mode " << src_mode << endl;
+    myfile << "########################################################" << endl;
 
     if (myfile.is_open())
     {

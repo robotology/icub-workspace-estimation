@@ -56,6 +56,7 @@ protected:
     /***************************************************************************/
     // EXTERNAL VARIABLES: change them from command line or through .ini file
     string name;              // Name of the thread
+    string src_mode;
     string eval_mode;         // Evaluation mode
     string expl_mode;         // Exploration mode
     string outputFile;        // Output file
@@ -63,6 +64,7 @@ protected:
     // Flag that manages verbosity (v=1 -> more text printed out; v=2 -> even more text):
     int verbosity;
 
+    double granP;
     int    resolJ;            // Resolution in the joint space
 
     double rate;              // Rate of the thread
@@ -115,7 +117,8 @@ public:
     // CONSTRUCTOR
     workspaceEvThread(int _rate, int _v, string _n, double _tT,
                       const iKinChain &_c, const vector<Vector> &_p2E,
-                      string _oF, string _eVM, string _eXM, int _rJ);
+                      string _oF, string _sM, string _eVM, string _eXM,
+                      double _gP, int _rJ);
 
     // COPY CONSTRUCTOR
     workspaceEvThread(const workspaceEvThread &_wET);
@@ -152,10 +155,12 @@ public:
     string getOutputFile() const { return outputFile; };
 
     vector<Vector> getExplVec() const { return explVec; };
+    string getSrcMode()  const { return src_mode;  };
     string getEvalMode() const { return eval_mode; };
     string getExplMode() const { return expl_mode; };
 
-    int getResolJ()      const { return resolJ; };
+    double getGranP()    const { return granP;  };
+    int    getResolJ()   const { return resolJ; };
 };
 
 #endif
