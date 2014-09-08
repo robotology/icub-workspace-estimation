@@ -1,4 +1,4 @@
-function mymap = colormapRGBmatrices( N, rm, gm, bm)
+function [simplegray, bluehot, hot2] = colormapRGBmatrices(N)
 % This function creates a custom color map (fucking cool!)
 % 
 % It expects 4 input parameters: N is the number of intermediate points that your colormap should have. The other three are matrices that contain the transitions for each channel. Such a matrix should have the following form:
@@ -38,7 +38,16 @@ function mymap = colormapRGBmatrices( N, rm, gm, bm)
 % bluehot = colormapRGBmatrices(500,MB,MG,MR);
 %
 
+    M = [0,0;1,1;];
+    MR=[0,0; 0.02,0.3; 0.3,1; 1,1];
+    MG=[0,0;  0.3,0;   0.7,1; 1,1];
+    MB=[0,0;  0.7,0;          1,1];
+    simplegray = createColormap(N, M, M, M);
+    hot2       = createColormap(N,MR,MG,MB);
+    bluehot    = createColormap(N,MB,MG,MR);
+end
 
+function mymap=createColormap(N,rm,gm,bm)
     x = linspace(0,1, N);
     rv = interp1( rm(:,1), rm(:,2), x);
     gv = interp1( gm(:,1), gm(:,2), x);
