@@ -1,7 +1,9 @@
 function [crossedPts,hgroup] = drawJointWorkspace(varargin)
 
     close all;
-    delete iCubWorkspace.avi;
+    if exist('iCubWorkspace.avi','file')
+        delete iCubWorkspace.avi;
+    end
 
     videoOn = 0;
     if nargin>0

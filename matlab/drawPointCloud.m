@@ -22,12 +22,14 @@ function handleGroup = drawPointCloud(pC,dS,cM,vO)
         if videoOn>0
             if ~exist('iCubWorkspace.avi','file')
                 writerObj=VideoWriter('iCubWorkspace','Motion JPEG AVI');
+                writerObj.Quality = 100;
                 writerObj.FrameRate=15;
                 open(writerObj);
             else
                 readerObj=VideoReader('iCubWorkspace.avi');
                 writerObj=VideoWriter('iCubWorkspace2','Motion JPEG AVI');
                 writerObj.FrameRate=readerObj.FrameRate;
+                writerObj.Quality = 100;
                 open(writerObj);
                 for i = 1:readerObj.NumberofFrames
                     frame = read(readerObj,i);
@@ -44,13 +46,16 @@ function handleGroup = drawPointCloud(pC,dS,cM,vO)
     z = reachedPts(:,3);
     c = reachedPts(:,4);
     K = convhull(x,y,z);
-    h = trisurf(K,x,y,z,c,'FaceAlpha',0.05);
+    h = trisurf(K,x,y,z,c,'FaceAlpha',0.3);
     shading interp;
     set(h,'Visible','Off');
     colorbar;
     caxis([min(c) max(c)]);
 
     if videoOn==1
+        for i=1:30
+            camorbit(-4,-0.1);
+        end
         % Add 15 empty frames at the beginning in order to have ~1 sec of wait
         for i=1:15
             frame=getframe(gcf);
@@ -67,7 +72,7 @@ function handleGroup = drawPointCloud(pC,dS,cM,vO)
         if drawSurfaces==true
             c = reachedPts(l(i):l(i+1),4);
             K = convhull(x,y,z);
-            h = trisurf(K,x,y,z,c,'FaceAlpha',0.05);
+            h = trisurf(K,x,y,z,c,'FaceAlpha',0.3);
             set(h,'Parent',handleGroup);
             shading interp;
         else
@@ -77,6 +82,10 @@ function handleGroup = drawPointCloud(pC,dS,cM,vO)
 
         if videoOn>0
             frame=getframe(gcf);
+            camorbit(3,-0.1);
+            writeVideo(writerObj,frame);
+            frame=getframe(gcf);
+            camorbit(3,-0.1);
             writeVideo(writerObj,frame);
         else
             pause(0.0125);
@@ -84,9 +93,11 @@ function handleGroup = drawPointCloud(pC,dS,cM,vO)
     end
 
     if videoOn
-        % Add 20 empty frames at the end in order to have ~2 sec of wait at the end
+        % Add 30 empty frames at the end in order to have ~2 sec of wait at the end
         if videoOn==3
-            for i=1:15
+            for i=1:60
+                camorbit(-2,-0.1);
+                frame=getframe(gcf);
                 writeVideo(writerObj,frame);
             end
         end
