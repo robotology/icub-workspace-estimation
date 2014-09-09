@@ -543,6 +543,7 @@ int main(int argc, char * argv[])
         cout<<"   --granP      double: spatial granularity of the operationalSpace exploration. Default 4cm."<<endl;
         cout<<"   --resolJ     int:    number of configurations explored by each joint in jointSpace exploration. Default 20."<<endl;
         cout<<"   --DH_file    string: DH.ini file to be used alongside the \'DH\' src_mode."<<endl;
+        cout<<"   --outputFile string: file to save explorations into. Default output.ini."<<endl;
         cout<<endl;
         return 0;
     }
