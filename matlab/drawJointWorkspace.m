@@ -13,8 +13,8 @@ function [crossedPts,hgroup] = drawJointWorkspace(varargin)
     if nargin>1
         filenames=varargin{2};
     else
-        filenames{1} = 'outputIndex.ini';
-        filenames{2} = 'outputIndex.ini';
+        filenames{1} = '../app/conf/output_left.ini';
+        filenames{2} = '../app/conf/output_right.ini';
     end
 
     [reachedPts{1},hgroup{1}] = drawWorkspace(filenames{1},1,videoOn);
