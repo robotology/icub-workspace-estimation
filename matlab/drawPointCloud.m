@@ -1,4 +1,4 @@
-function handleGroup = drawPointCloud(pC,dS,cM,vO)
+function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
 
     reachedPts   = pC;
     drawSurfaces = dS;

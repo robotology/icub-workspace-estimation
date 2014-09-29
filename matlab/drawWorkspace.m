@@ -81,5 +81,5 @@ function [reachedPts,hgroup] = drawWorkspace(varargin)
     bluehot=flipud(bluehot);
     colormap(bluehot);
 
-    hgroup = drawPointCloud(reachedPts,drawSurfaces,bluehot,videoOn);
+    [hgroup,reachedPts] = drawPointCloud(reachedPts,drawSurfaces,bluehot,videoOn);
 end
