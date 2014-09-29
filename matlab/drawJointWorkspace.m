@@ -13,19 +13,19 @@ function [crossedPts,hgroup] = drawJointWorkspace(varargin)
     if nargin>1
         filenames=varargin{2};
     else
-        filenames{1} = '../app/conf/output_left.ini';
-        filenames{2} = '../app/conf/output_right.ini';
+        filenames{1} = 'outputIndex.ini';
+        filenames{2} = 'outputIndex.ini';
     end
 
     [reachedPts{1},hgroup{1}] = drawWorkspace(filenames{1},1,videoOn);
     hl = get(hgroup{1},'Children');% cb is handle of hggroup
-    set(hl,'FaceAlpha',0.01);
+    % set(hl,'FaceAlpha',0.01);
     % set(hl,'Visible','Off');
 
     for i = 2:length(filenames)
         [reachedPts{i},hgroup{i}] = drawWorkspace(filenames{i},1,videoOn+1);
         hl = get(hgroup{i},'Children');% cb is handle of hggroup
-        set(hl,'FaceAlpha',0.01);
+        % set(hl,'FaceAlpha',0.01);
     end
 
     freezeColors
