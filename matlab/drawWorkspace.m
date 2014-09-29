@@ -18,7 +18,7 @@ function [reachedPts,hgroup] = drawWorkspace(varargin)
 
         % filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
         % filename = '../app/conf/output.ini';
-        filename = '../app/conf/output_right.ini';
+        filename = 'outputIndex.ini';
         if nargin>0
             filename=varargin{1};
         end
@@ -62,8 +62,8 @@ function [reachedPts,hgroup] = drawWorkspace(varargin)
         hold on;        grid on;        view(3);
         xlabel('x');    ylabel('y');    zlabel('z');
 
-        axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
-        axis equal;
+        % axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
+        % axis equal;
         drawRefFrame(eye(4),0.6);
     else
         hfigure=[];
@@ -82,4 +82,5 @@ function [reachedPts,hgroup] = drawWorkspace(varargin)
     colormap(bluehot);
 
     [hgroup,reachedPts] = drawPointCloud(reachedPts,drawSurfaces,bluehot,videoOn);
+    axis equal;
 end
