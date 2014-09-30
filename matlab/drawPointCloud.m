@@ -11,9 +11,17 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
     [Y,idx]=sort(reachedPts(:,4));
     reachedPts=reachedPts(idx,:);
 
+    % Change the reference system from m to mm
+    reachedPts=reachedPts.*1000;
+
     % Set a suitable number of splits (for both video and visualization purposes)
     if drawSurfaces==true
-        numSplits = 50;
+        if size(reachedPts,1)>500
+            numSplits = 50;
+        else
+            numSplits = 1+int16(size(reachedPts,1)/10);
+            disp(numSplits);
+        end
     else
         numSplits = 100;
     end
@@ -46,7 +54,7 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
     z = reachedPts(:,3);
     c = reachedPts(:,4);
     K = convhull(x,y,z);
-    h = trisurf(K,x,y,z,c,'FaceAlpha',0.3);
+    h = trisurf(K,x,y,z,c,'FaceAlpha',0.2);
     shading interp;
     set(h,'Visible','Off');
     colorbar;

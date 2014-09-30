@@ -1,4 +1,4 @@
-function [reachedPts,hgroup] = drawWorkspace(varargin)
+function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
 % Draw the workspace from a text file
 % Function for importing data from a proper output.ini file
 %
@@ -6,33 +6,47 @@ function [reachedPts,hgroup] = drawWorkspace(varargin)
 %
 % INPUT:
 %   varargin{1} -> output.ini file to be used for the drawing
-%   varargin{2} -> flag to know if to draw either a set of isosurfaces (true) or points (false)
-%   varargin{3} -> flag to know if to record a video or not. If true, it records an iCubWorkspace.avi file.
+%   varargin{2} -> flag to know if to draw either a set of isosurfaces (true, default) or points (false)
+%   varargin{3} -> flag to know if to record a video or not (default false). If true, it records an iCubWorkspace.avi file.
+%   varargin{4} -> flag to know if to draw the kinematic chain or not (default false).
+%                  If true, it loads the kinematic info to a file placed in the same folder as the output.ini and called exactly 
+%                  the same but with 'output' replaced by 'DH'
 %
 % OUTPUT:
 %   reachedPtS  -> an Nx4 array of reached 3D points + their manipulability index.
 %                  It has been ordered according to the magnitude of the manipulability (from low to high)
 %   hgroup      -> handle for the surfaces that has been drawn
+        addpath('./utils/');
 
     %% Initialize variables according to input arguments
-
-        % filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
-        % filename = '../app/conf/output.ini';
-        filename = 'outputIndex.ini';
-        if nargin>0
-            filename=varargin{1};
-        end
         disp('Varargin:');
         disp(varargin);
+
+        % filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
+        filename = '../app/conf/output_right.ini';
+        if nargin>0
+            if ~strcmp(varargin{1},'default')
+                filename=varargin{1};
+            end
+        end
+        disp(sprintf('    filename: %s',filename));
 
         drawSurfaces=true;
         if nargin>1
             drawSurfaces=varargin{2};
+            disp(sprintf('    drawSurfaces: %i',drawSurfaces));
         end
 
         videoOn=false;
         if nargin>2
             videoOn=varargin{3};
+            disp(sprintf('    videoOn: %i',videoOn));
+        end
+
+        drawChain=false;
+        if nargin>3
+            drawChain=varargin{4};
+            disp(sprintf('    drawChain: %i',drawChain));
         end
 
         % Skip the first five lines of the output file
@@ -64,7 +78,7 @@ function [reachedPts,hgroup] = drawWorkspace(varargin)
 
         % axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
         % axis equal;
-        drawRefFrame(eye(4),0.6);
+        % drawRefFrame(eye(4),0.2);
     else
         hfigure=[];
     end
@@ -81,6 +95,17 @@ function [reachedPts,hgroup] = drawWorkspace(varargin)
     bluehot=flipud(bluehot);
     colormap(bluehot);
 
+    disp('Drawing point Cloud..');
     [hgroup,reachedPts] = drawPointCloud(reachedPts,drawSurfaces,bluehot,videoOn);
     axis equal;
+
+    if drawChain==true
+        hl = get(hgroup,'Children');% cb is handle of hggroup
+        set(hl,'FaceAlpha',0.1);
+
+        chainfile=strrep(filename, 'output', 'DH');
+        disp('Drawing kinematic chain..');
+        disp(sprintf('    File to load: %s',chainfile));
+        [chain, rawdata] = drawKinematicChain(chainfile);
+    end
 end
