@@ -20,8 +20,8 @@ function [chain] = FwdKin(body_part)
 %   chain (struct) - the resulted chain with everything inside it. It's divided by body parts.
 
     %% MISC STUFF
-        ljnt  = 11;               % joint pic length
-        rjnt  =  5;               % joint pic radius
+        ljnt  = 7;               % joint pic length
+        rjnt  = 3;               % joint pic radius
         linkratio = 1/15;        % link dimension ratio
 
         LinkColor  = body_part.LinkColor;

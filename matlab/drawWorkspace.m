@@ -78,7 +78,7 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
 
         % axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
         % axis equal;
-        % drawRefFrame(eye(4),0.2);
+        drawRefFrame(eye(4),1);
     else
         hfigure=[];
     end
@@ -108,4 +108,5 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
         disp(sprintf('    File to load: %s',chainfile));
         [chain, rawdata] = drawKinematicChain(chainfile);
     end
+    axis equal;
 end

@@ -12,7 +12,7 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
     reachedPts=reachedPts(idx,:);
 
     % Change the reference system from m to mm
-    reachedPts=reachedPts.*1000;
+    reachedPts(:,1:3)=reachedPts(:,1:3).*1000;
 
     % Set a suitable number of splits (for both video and visualization purposes)
     if drawSurfaces==true
@@ -53,12 +53,15 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
     y = reachedPts(:,2);
     z = reachedPts(:,3);
     c = reachedPts(:,4);
-    K = convhull(x,y,z);
-    h = trisurf(K,x,y,z,c,'FaceAlpha',0.2);
-    shading interp;
-    set(h,'Visible','Off');
-    colorbar;
-    caxis([min(c) max(c)]);
+
+    try
+        K = convhull(x,y,z);
+        h = trisurf(K,x,y,z,c,'FaceAlpha',0.2);
+        shading interp;
+        set(h,'Visible','Off');
+        colorbar;
+        caxis([min(c) max(c)]);
+    end
 
     if videoOn==1
         for i=1:30
@@ -117,25 +120,29 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
     end
 
     % Compute the volume of the point cloud
-    P = reachedPts(:,1:3)';
-    K = convhull(P');
-    K = unique(K(:));
-    Q = P(:,K);
-    [A, c] = MinVolEllipse(Q, .01);
-    % Ellipse_plot(A,c);
-    [U Q V] = svd(A);
-    radius(1) = 1/sqrt(Q(1,1));
-    radius(2) = 1/sqrt(Q(2,2));
-    radius(3) = 1/sqrt(Q(3,3));
-    vol = (4/3)*pi*sqrt(det(A^-1));
+    try
+        P = reachedPts(:,1:3)';
+        K = convhull(P');
+        K = unique(K(:));
+        Q = P(:,K);
+        [A, c] = MinVolEllipse(Q, .01);
+        % Ellipse_plot(A,c);
+        [U Q V] = svd(A);
+        radius(1) = 1/sqrt(Q(1,1));
+        radius(2) = 1/sqrt(Q(2,2));
+        radius(3) = 1/sqrt(Q(3,3));
+        vol = (4/3)*pi*sqrt(det(A^-1));
 
-    % Prints out some statistics
-    disp('Workspace statistics:');
-    disp(sprintf('\tMin   (x,y,z): %g\t%g\t%g\t[m]',min(reachedPts(:,1:3))));
-    disp(sprintf('\tMax   (x,y,z): %g\t%g\t%g\t[m]',max(reachedPts(:,1:3))));
-    disp(sprintf('\tRadii (x,y,z): %g\t%g\t%g\t[m]',radius));
-    disp(sprintf('\tVolume:        %g\t[m^3]',vol));
-    disp('Manipulability statistics:');
-    disp(sprintf('\tMin: %g\t[m]',min(reachedPts(:,4))));
-    disp(sprintf('\tMax: %g\t[m]',max(reachedPts(:,4))));
+        % Prints out some statistics
+        disp('Workspace statistics:');
+        disp(sprintf('\tMin   (x,y,z): %g\t%g\t%g\t[mm]',min(reachedPts(:,1:3))));
+        disp(sprintf('\tMax   (x,y,z): %g\t%g\t%g\t[mm]',max(reachedPts(:,1:3))));
+        disp(sprintf('\tRadii (x,y,z): %g\t%g\t%g\t[mm]',radius));
+        disp(sprintf('\tVolume:        %g\t[mm^3]',vol));
+        disp('Manipulability statistics:');
+        disp(sprintf('\tMin: %g\t[mm]',min(reachedPts(:,4))));
+        disp(sprintf('\tMax: %g\t[mm]',max(reachedPts(:,4))));
+    catch
+        disp('   I could not Compute the volume (there was some problem)!');
+    end
 end
