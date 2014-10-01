@@ -90,6 +90,10 @@ bool workspaceEvThread::exploreJointSpace(const int &jnt)
     double min = (chain)[jnt].getMin();
     double max = (chain)[jnt].getMax();
     double increment = (max-min)/(resolJ-1);
+    if (increment==0)
+    {
+        increment=0+1e-3;
+    }
 
     // The spaces are there in order to make some order into the printouts (otherwise its a mess)
     string spaces="";
