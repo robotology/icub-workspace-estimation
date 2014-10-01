@@ -268,7 +268,6 @@ public:
                 else printMessage(0,"Could not find \'resolJ\' in the config file; using %g as default.\n",resolJ);
             }
 
-
         //********************  VERBOSITY **********************
             if (rf.check("verbosity"))
             {
@@ -288,7 +287,19 @@ public:
         //******************** OUTPUT_FILE *********************
             string homePath = rf.getHomeContextPath().c_str();
             homePath = homePath+"/";
-            outputFile = rf.check("outputFile", Value("output.ini")).asString().c_str();
+            if (src_mode == "DH")
+            {
+                string toReplace="DH";
+                string replaceWith="output";
+                outputFile = DH_file;
+
+                outputFile.replace(outputFile.find(toReplace), toReplace.length(), replaceWith);
+
+            }
+            else
+            {
+                outputFile = rf.check("outputFile", Value("output.ini")).asString().c_str();
+            }
             printMessage(0,"Output files set to: %s + %s*\n", homePath.c_str(),outputFile.c_str());
 
         //***************** INITIALIZE STUFF *******************
@@ -301,7 +312,8 @@ public:
             {
                 printMessage(1,"Instantiating thread %i...\n",i);
                 string threadName = name + "Thread_" + int_to_string(i);
-                string threadOutputFile = homePath+outputFile + "_" + int_to_string(i);
+                // string threadOutputFile = homePath+outputFile + "_" + int_to_string(i);
+                string threadOutputFile = homePath+outputFile;
                 iKinChain _chain(*chain);
                 wsEvThreads.push_back(workspaceEvThread(rate,verbosity,threadName,XYZTol,
                                                         _chain,explVec,threadOutputFile,

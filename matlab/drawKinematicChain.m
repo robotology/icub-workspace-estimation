@@ -34,8 +34,6 @@ function [chain, rawmat] =drawKinematicChain(filename)
     fclose(fileID);
 
     % Create output variable(s)
-    disp(dataArray{7})
-    disp(dataArray{8})
     rraw = [dataArray{1:end-1}];
 
     rawmat = rraw(4:end,2:8);
