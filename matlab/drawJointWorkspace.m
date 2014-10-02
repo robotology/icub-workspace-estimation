@@ -16,46 +16,49 @@ function [crossedPts,hgroup] = drawJointWorkspace(varargin)
         % filenames{1} = '../app/conf/output_left.ini';
         % filenames{2} = '../app/conf/output_right.ini';
         filenames{1} = 'output_Index.ini';
-        filenames{2} = 'output_Middle.ini';
+        filenames{2} = 'output_Thumb.ini';
     end
 
-    [reachedPts{1},hgroup{1}] = drawWorkspace(filenames{1},1,videoOn);
-    hl = get(hgroup{1},'Children');% cb is handle of hggroup
-    % set(hl,'FaceAlpha',0.01);
-    % set(hl,'Visible','Off');
+    % [reachedPts{1},hgroup{1}] = drawWorkspace(filenames{1},1,videoOn,1);
+    % hl = get(hgroup{1},'Children');% cb is handle of hggroup
+    % % set(hl,'FaceAlpha',0.01);
+    % % set(hl,'Visible','Off');
 
-    for i = 2:length(filenames)
-        [reachedPts{i},hgroup{i}] = drawWorkspace(filenames{i},1,videoOn+1);
-        hl = get(hgroup{i},'Children');% cb is handle of hggroup
-        % set(hl,'FaceAlpha',0.01);
+    for i = 1:length(filenames)
+        [reachedPts{i},hgroup{i}] = drawWorkspace(filenames{i},1,videoOn,1);
     end
 
-    freezeColors
-
-    if length(filenames) == 2
-        A=reachedPts{1};
-        B=reachedPts{2};
-
-        crossedPts = intersectWorkspaces(A,B);
-        reachedPts{3} = crossedPts;
-
-        [simplegray,bluehot,hot2] = colormapRGBmatrices(size(crossedPts,1));
-        hot2 = flipud(hot2);
-        colormap(hot2);
-
-        % hfigure=figure('Position',[100 100 1000 800],'Color','white');
-        % set(gcf, 'Name','Workspace Evaluation','numbertitle','off');
-        % hold on;        grid on;        view(3);
-        % xlabel('x');    ylabel('y');    zlabel('z');
-
-        % axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
-        % axis equal;
-        % drawRefFrame(eye(4),0.6);
-
-
-        hgroup{3}=drawPointCloud(crossedPts,1,hot2,videoOn+2);
-        hl = get(hgroup{3},'Children');% cb is handle of hggroup
+    for i = 1:length(filenames)
+        hchildren = get(hgroup{i},'Children');% cb is handle of hggroup
+        set(hchildren,'FaceColor',[0 0.5 1]);
     end
+
+    % freezeColors
+
+    % if length(filenames) == 2
+    %     A=reachedPts{1};
+    %     B=reachedPts{2};
+
+    %     crossedPts = intersectWorkspaces(A,B);
+    %     reachedPts{3} = crossedPts;
+
+    %     [simplegray,bluehot,hot2] = colormapRGBmatrices(size(crossedPts,1));
+    %     hot2 = flipud(hot2);
+    %     colormap(hot2);
+
+    %     % hfigure=figure('Position',[100 100 1000 800],'Color','white');
+    %     % set(gcf, 'Name','Workspace Evaluation','numbertitle','off');
+    %     % hold on;        grid on;        view(3);
+    %     % xlabel('x');    ylabel('y');    zlabel('z');
+
+    %     % axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
+    %     % axis equal;
+    %     % drawRefFrame(eye(4),0.6);
+
+
+    %     hgroup{3}=drawPointCloud(crossedPts,1,hot2,videoOn+2);
+    %     hl = get(hgroup{3},'Children');% cb is handle of hggroup
+    % end
 
     
 end
