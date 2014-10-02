@@ -15,13 +15,15 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
     reachedPts(:,1:3)=reachedPts(:,1:3).*1000;
 
     % Set a suitable number of splits (for both video and visualization purposes)
-    if drawSurfaces==true
+    if drawSurfaces==1
         if size(reachedPts,1)>500
             numSplits = 50;
         else
             numSplits = 1+int16(size(reachedPts,1)/10);
             disp(numSplits);
         end
+    elseif drawSurfaces==2
+        numSplits = 1;
     else
         numSplits = 100;
     end
@@ -80,7 +82,7 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
         y = reachedPts(l(i):l(i+1),2);
         z = reachedPts(l(i):l(i+1),3);
 
-        if drawSurfaces==true
+        if drawSurfaces>0
             c = reachedPts(l(i):l(i+1),4);
             K = convhull(x,y,z);
             h = trisurf(K,x,y,z,c,'FaceAlpha',0.175);

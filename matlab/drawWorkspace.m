@@ -1,27 +1,41 @@
 function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
-% Draw the workspace from a text file
+%% Draws the workspace from a text file
+%
 % Function for importing data from a proper output.ini file
 %
-%   [reachedPts,filename] = drawWorkspace(varargin)
+%   [reachedPts,hgroup,chain] = drawWorkspace(varargin)
 %
-% INPUT:
-%   varargin{1} -> output.ini file to be used for the drawing
-%   varargin{2} -> flag to know if to draw either a set of isosurfaces (true, default) or points (false)
-%   varargin{3} -> flag to know if to record a video or not (default false). If true, it records an iCubWorkspace.avi file.
-%   varargin{4} -> flag to know if to draw the kinematic chain or not (default false).
-%                  If true, it loads the kinematic info to a file placed in the same folder as the output.ini and called exactly 
-%                  the same but with 'output' replaced by 'DH'
+% It can be called as it is (in this case it uses default parameters), or with a growing number of input
+% arguments, specified below.
+% 
+% INPUT ARGUMENTS:
+%   filename     -> output.ini file to be used for the drawing (default '../app/conf/output_right.ini')
+%   drawSurfaces -> int  to know what to draw. It can be either 0 (set of 3d points), 1 (set of convex hulls, default),
+%                   or 2 (a single convex hull encompassing all of the points). If available, the points will be color-coded
+%                   according to their manipulability measure. If not, the coloration is random.
+%   videoOn      -> flag to know if to record a video or not (default false). If true, it records an iCubWorkspace.avi file.
+%   drawChain    -> flag to know if to draw the kinematic chain or not (default trye).
+%                   If true, it loads the kinematic info to a file placed in the same folder as the output.ini and called exactly 
+%                   the same but with 'output' replaced by 'DH' (e.g. if I specify 'output_whatever.ini' it will search for 'DH_whatever.ini')
 %
 % OUTPUT:
 %   reachedPtS  -> an Nx4 array of reached 3D points + their manipulability index.
 %                  It has been ordered according to the magnitude of the manipulability (from low to high)
-%   hgroup      -> handle for the surfaces that has been drawn
+%   hgroup      -> handle for the surfaces that have been drawn
+%   chain       -> class enclosing everything related to the kinematic chain. if drawChain has bee set to false, 
+%                  this will be an empty variable.
+% 
+% EXAMPLE USAGE:
+%   [r,h,c] = drawWorkspace('output.ini',2,1,0):
+%           1. load a file called 'output.ini'
+%           2. draw a single convex hull for all the points
+%           3. record a video
+%           4. do not draw the kinematic chain
+%
+
         addpath('./utils/');
 
     %% Initialize variables according to input arguments
-        disp('Varargin:');
-        disp(varargin);
-
         % filename = '~/.local/share/yarp/contexts/iCubWorkspace/output.ini';
         filename = '../app/conf/output_right.ini';
         if nargin>0
@@ -43,7 +57,7 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
             disp(sprintf('    videoOn: %i',videoOn));
         end
 
-        drawChain=false;
+        drawChain=true;
         if nargin>3
             drawChain=varargin{4};
             disp(sprintf('    drawChain: %i',drawChain));
