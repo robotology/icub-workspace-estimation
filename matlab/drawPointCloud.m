@@ -99,9 +99,17 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
             camorbit(3,-0.1);
             writeVideo(writerObj,frame);
         else
-            pause(0.0125);
+            pause(0.0075);
         end
     end
+
+    % if drawSurfaces==false
+    %     for i = 1:size(reachedPts,1)
+    %         x=[0 reachedPts(i,1)];
+    %         y=[0 reachedPts(i,2)];
+    %         z=[0 reachedPts(i,3)];
+    %         plot3(x,y,z);
+    % end
 
     if videoOn
         % Add 30 empty frames at the end in order to have ~2 sec of wait at the end

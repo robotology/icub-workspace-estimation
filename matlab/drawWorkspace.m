@@ -88,8 +88,8 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
     reachedPts(isnan(reachedPts)) = 0.0;
 
     % % Remove duplicates in order to fasten up the drawing
-    % [Y idx ida]=unique(reachedPts(:,1:3),'rows');
-    % reachedPts=reachedPts(idx,:);
+    [Y idx ida]=unique(reachedPts(:,1:3),'rows');
+    reachedPts=reachedPts(idx,:);
 
     [simplegray,bluehot,hot2] = colormapRGBmatrices(size(reachedPts,1));
     bluehot=flipud(bluehot);
@@ -101,7 +101,7 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
 
     if drawChain==true
         hl = get(hgroup,'Children');% cb is handle of hggroup
-        set(hl,'FaceAlpha',0.1);
+        % set(hl,'FaceAlpha',0.3);
 
         chainfile=strrep(filename, 'output', 'DH');
         disp('Drawing kinematic chain..');
