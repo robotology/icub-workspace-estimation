@@ -56,7 +56,7 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
 
     try
         K = convhull(x,y,z);
-        h = trisurf(K,x,y,z,c,'FaceAlpha',0.2);
+        h = trisurf(K,x,y,z,c,'FaceAlpha',0.175);
         shading interp;
         set(h,'Visible','Off');
         colorbar;
@@ -83,7 +83,7 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
         if drawSurfaces==true
             c = reachedPts(l(i):l(i+1),4);
             K = convhull(x,y,z);
-            h = trisurf(K,x,y,z,c,'FaceAlpha',0.3);
+            h = trisurf(K,x,y,z,c,'FaceAlpha',0.175);
             set(h,'Parent',handleGroup);
             shading interp;
         else

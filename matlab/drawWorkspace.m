@@ -100,13 +100,17 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
     axis equal;
 
     if drawChain==true
-        hl = get(hgroup,'Children');% cb is handle of hggroup
-        % set(hl,'FaceAlpha',0.3);
+        hchildren = get(hgroup,'Children');% cb is handle of hggroup
+        % set(hchildren,'FaceAlpha',0.3);
 
         chainfile=strrep(filename, 'output', 'DH');
         disp('Drawing kinematic chain..');
         disp(sprintf('    File to load: %s',chainfile));
         [chain, rawdata] = drawKinematicChain(chainfile);
+
+        set(hchildren,'FaceColor',[0 0.5 1]);
+    else
+        chain = '\';
     end
     axis equal;
 end
