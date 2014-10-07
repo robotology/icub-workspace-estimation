@@ -38,10 +38,10 @@ function [simplegray, bluehot, hot2] = colormapRGBmatrices(N)
 % bluehot = colormapRGBmatrices(500,MB,MG,MR);
 %
 
-    M = [0,0;1,1;];
-    MR=[0,0; 0.02,0.3; 0.3,1; 1,1];
-    MG=[0,0;  0.3,0;   0.7,1; 1,1];
-    MB=[0,0;  0.7,0;          1,1];
+    M  = [0,0;1,1;];
+    MR = [0,0; 0.02,0.3; 0.3,1; 1,0.95];
+    MG = [0,0;  0.3,0;   0.7,1; 1,0.95];
+    MB = [0,0;  0.7,0;          1,0.95];
     simplegray = createColormap(N, M, M, M);
     hot2       = createColormap(N,MR,MG,MB);
     bluehot    = createColormap(N,MB,MG,MR);
