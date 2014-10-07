@@ -1,6 +1,6 @@
 function vxl = computeVoxelMatrix(pts,numBins)
 
-    numBins = [64 64 16];
+    % numBins = [64 64 16];
 
     % Create the empty output matrix
     vxl = zeros(numBins(1),numBins(2),numBins(3));
@@ -11,21 +11,17 @@ function vxl = computeVoxelMatrix(pts,numBins)
               (max(pts(:,3))-min(pts(:,3)))/numBins(3)]; 
 
     for i=1:size(pts,1)
-        idxX = floor((pts(i,1)-min(pts(:,1)))/binW(1))+1;
-        if idxX==numBins(1)+1
-            idxX=1;
+        for j=1:3
+            idx(j) = floor((pts(i,j)-min(pts(:,j)))/binW(j))+1;
+            if idx(j)==numBins(j)+1
+                idx(j)=numBins(j);
+            end
         end
-        idxY = floor((pts(i,2)-min(pts(:,2)))/binW(2))+1;
-        if idxY==numBins(2)+1
-            idxY=1;
-        end
-        idxZ = floor((pts(i,3)-min(pts(:,3)))/binW(3))+1;
-        if idxZ==numBins(3)+1
-            idxZ=1;
-        end
-        vxl(idxX,idxY,idxZ) = vxl(idxX,idxY,idxZ) + 1;
+        vxl(idx(1),idx(2),idx(3)) = vxl(idx(1),idx(2),idx(3)) + 1;
     end
 
     vxl=smooth3(vxl);
+
+    % hiso = patch(isosurface(Ds,0.3),'FaceColor',rand(3,1),'EdgeAlpha',0.2,'FaceAlpha',0.6)
 
 end
