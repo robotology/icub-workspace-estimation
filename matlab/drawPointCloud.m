@@ -136,7 +136,7 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
         K = unique(K(:));
         Q = P(:,K);
         [A, c] = MinVolEllipse(Q, .01);
-        % Ellipse_plot(A,c);
+        % drawEllipse(A,c);
         [U Q V] = svd(A);
         radius(1) = 1/sqrt(Q(1,1));
         radius(2) = 1/sqrt(Q(2,2));

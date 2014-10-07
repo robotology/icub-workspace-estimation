@@ -1,6 +1,6 @@
-function Ellipse_plot(A, C, varargin)
+function drawEllipse(A, C, varargin)
 %
-%  Ellipse_Plot(A,C,N) plots a 2D ellipse or a 3D ellipsoid 
+%  drawEllipse(A,C,N) plots a 2D ellipse or a 3D ellipsoid 
 %  represented in the "center" form:  
 %               
 %                   (x-C)' A (x-C) <= 1
@@ -22,7 +22,7 @@ function Ellipse_plot(A, C, varargin)
 %       figure
 %       plot3(P(1,:),P(2,:),P(3,:),'*')
 %       hold on
-%       Ellipse_plot(A,C)
+%       drawEllipse(A,C)
 %  
 %
 %  Nima Moshtagh

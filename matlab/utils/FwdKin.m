@@ -68,14 +68,13 @@ function [chain] = FwdKin(body_part)
         end
 
         % Draw the stuff (joints, ref frames, links)
-        for i = 1:length(RFFrame)-1
+        for i = 1:length(RFFrame)-2
             drawCylinder(ljnt, rjnt, RFFrame{i+1} * [1 0 0 0; 0 1 0 0; 0 0 1 -ljnt/2; 0 0 0 1], JntColor, 100, 0.8);
         end
+        drawSphere(rjnt-1,RFFrame{end}(1:3,4), JntColor, 100, 0.9);
 
         drawRefFrame(RFFrame{1},1,'hat');
-        for i = length(RFFrame):length(RFFrame)
-            drawRefFrame(RFFrame{i},i);
-        end
+        drawRefFrame(RFFrame{end},i);
 
         for i = 1:length(RFFrame)-1
             cyl{i} = drawCylinderFromTo(RFFrame{i}(1:3,4),RFFrame{i+1}(1:3,4), LinkColor, 100, linkTransparency, linkratio);
