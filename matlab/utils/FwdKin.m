@@ -73,6 +73,12 @@ function [chain] = FwdKin(body_part)
         end
         drawSphere(rjnt-1,RFFrame{end}(1:3,4), JntColor, 100, 0.9);
 
+        if isfield(body_part,'HN')
+            RTMat{end+1} = body_part.HN;
+            RFFrame{end+1} = RFFrame{end} * RTMat{end};
+            drawSphere(rjnt-1,RFFrame{end}(1:3,4), JntColor, 100, 0.9);
+        end
+
         drawRefFrame(RFFrame{1},1,'hat');
         drawRefFrame(RFFrame{end},i);
 

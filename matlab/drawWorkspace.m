@@ -120,7 +120,10 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
         chainfile=strrep(filename, 'output', 'DH');
         disp('Drawing kinematic chain..');
         disp(sprintf('    File to load: %s',chainfile));
-        [chain, rawdata] = drawKinematicChain(chainfile);
+
+        scalingFactor=sum(max(reachedPts(:,1:3))-min(reachedPts(:,1:3)));
+        disp(scalingFactor)
+        chain = drawKinematicChain(chainfile);
 
         set(hchildren,'FaceColor',[0 0.5 1]);
     else

@@ -61,7 +61,9 @@ function [handleGroup, reachedPts] = drawPointCloud(pC,dS,cM,vO)
         h = trisurf(K,x,y,z,c,'FaceAlpha',0.175);
         shading interp;
         set(h,'Visible','Off');
-        colorbar;
+        if sum(c) ~= 0
+            colorbar;            
+        end
         caxis([min(c) max(c)]);
     end
 
