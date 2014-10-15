@@ -29,6 +29,8 @@ function [chain] = FwdKin(body_part)
 
         JntColor   = [.7 .7 .7];  % RGB color of the joints
 
+        scaling = body_part.scalingfactor;
+
     %% PARAMETERS
 
         H0  = body_part.H0();
@@ -79,8 +81,8 @@ function [chain] = FwdKin(body_part)
             drawSphere(rjnt-1,RFFrame{end}(1:3,4), JntColor, 100, 0.9);
         end
 
-        drawRefFrame(RFFrame{1},1,'hat');
-        drawRefFrame(RFFrame{end},i);
+        drawRefFrame(RFFrame{1},scaling,1,'hat');
+        drawRefFrame(RFFrame{end},scaling,i);
 
         for i = 1:length(RFFrame)-1
             cyl{i} = drawCylinderFromTo(RFFrame{i}(1:3,4),RFFrame{i+1}(1:3,4), LinkColor, 100, linkTransparency, linkratio);

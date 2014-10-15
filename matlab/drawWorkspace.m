@@ -92,7 +92,7 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
 
         % axis([-0.7,0.1,-0.7,0.7,-0.4,0.8]);
         % axis equal;
-        drawRefFrame(eye(4),1);
+        drawRefFrame(eye(4),1,1);
     else
         hfigure=[];
     end
@@ -121,9 +121,9 @@ function [reachedPts,hgroup,chain] = drawWorkspace(varargin)
         disp('Drawing kinematic chain..');
         disp(sprintf('    File to load: %s',chainfile));
 
-        scalingFactor=sum(max(reachedPts(:,1:3))-min(reachedPts(:,1:3)));
-        disp(scalingFactor)
-        chain = drawKinematicChain(chainfile);
+        workspacelimits=sum(max(reachedPts(:,1:3))-min(reachedPts(:,1:3)));
+        
+        chain = drawKinematicChain(chainfile,workspacelimits);
 
         set(hchildren,'FaceColor',[0 0.5 1]);
     else

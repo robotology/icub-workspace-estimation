@@ -1,4 +1,4 @@
-function [Oxyz ] = DrawRefFrame(G,num,varargin)
+function [Oxyz ] = DrawRefFrame(G,scaling,num,varargin)
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Draw reference frames attached to the centers of mass
@@ -13,13 +13,13 @@ for i=1:size(hex,1)
     rgb(i,:) = [hex2dec(hx(1:2)) hex2dec(hx(3:4)) hex2dec(hx(5:6))]/255;
 end
 
-length = 10 + 1.5^num;
+length = num*scaling;
 
 Origin1 = G*[0 0 0 1]';
 
 x_axis_1 = G*[length 0 0 1]';
 h = quiver3(Origin1(1), Origin1(2), Origin1(3), x_axis_1(1) - Origin1(1), x_axis_1(2) - Origin1(2), x_axis_1(3) - Origin1(3), 0);
-if nargin>=3
+if nargin>=4
     if varargin{1} == 'hat'
         set(h, 'Color', 'm', 'LineWidth', 1/4*num + 1, 'MaxHeadSize', 4, 'ShowArrowHead', 'off')
     else
@@ -33,7 +33,7 @@ set(h, 'ShowArrowHead', 'on')
 
 y_axis_1 = G*[0 length 0 1]';
 h = quiver3(Origin1(1), Origin1(2), Origin1(3), y_axis_1(1) - Origin1(1), y_axis_1(2) - Origin1(2), y_axis_1(3) - Origin1(3), 0);
-if nargin>=3
+if nargin>=4
     if varargin{1} == 'hat'
         set(h, 'Color', 'c', 'LineWidth', 1/4*num+ 1, 'MaxHeadSize', 4, 'ShowArrowHead', 'off')
     else
@@ -55,7 +55,7 @@ set(h, 'ShowArrowHead', 'on')
 %h = text(y_axis_1(1), y_axis_1(2), y_axis_1(3), strcat('y_{', num2str(num), '}'));
 %set(h, 'FontSize', 16)
 
-if nargin>=3
+if nargin>=4
     if varargin{1} == 'hat'
         h = text(z_axis_1(1), z_axis_1(2), z_axis_1(3), strcat('$\hat{z_{', num2str(num-1), '}}$'),'Interpreter','latex','Color', rgb(3,:));
     else

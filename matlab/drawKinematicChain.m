@@ -1,8 +1,8 @@
-function [chain] =drawKinematicChain(filename)
+function [chain] =drawKinematicChain(filename,workspacelimits)
 %DRAWKINEMATICCHAIN Imports a kinematic chain and draws it on the figure
 %
 % Example:
-%   chain =drawKinematicChain(filename);
+%   chain =drawKinematicChain(filename,workspacelimits);
 %
     M_PI = pi;
     CTRL_DEG2RAD = pi/180;
@@ -115,6 +115,9 @@ function [chain] =drawKinematicChain(filename)
 %     ch.Th = ch.Th * CTRL_DEG2RAD;
     ch.LinkColor = rand(1,3);
     ch.H_0 = eye(4);
+
+    workspacelimits=workspacelimits/200;
+    ch.scalingfactor = workspacelimits;
 
     chain=FwdKin(ch);
 
