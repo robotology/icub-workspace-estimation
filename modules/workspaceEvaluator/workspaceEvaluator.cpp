@@ -524,6 +524,8 @@ public:
 */
 int main(int argc, char * argv[])
 {
+    Network yarp;
+
     ResourceFinder moduleRF;
     moduleRF.setVerbose(false);
     moduleRF.setDefaultContext("iCubWorkspace");
@@ -559,8 +561,7 @@ int main(int argc, char * argv[])
         cout<<endl;
         return 0;
     }
-
-    Network yarp;
+    
     if (!yarp.checkNetwork())
     {
         printf("No Network!!!\n");
