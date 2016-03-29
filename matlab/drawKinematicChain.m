@@ -55,7 +55,7 @@ function [chain] =drawKinematicChain(filename,workspacelimits)
     if sum(ix)~=0
         ch.numLinks=str2num(s{1});
     else
-        disp('ERROR! no numLinks has been found!');
+        error('ERROR! no numLinks has been found!');
     end
     disp(sprintf('numLinks: %i',ch.numLinks));
 
@@ -88,15 +88,15 @@ function [chain] =drawKinematicChain(filename,workspacelimits)
     s=strrep(s,')','');
     
     if sum(ix)~=0
-        ch.Th = str2num(s{1});
+        ch.Th = str2num(s{1})*CTRL_DEG2RAD;
     else
         ch.Th = (ch.DH(:,end)+ch.DH(:,end-1))/2;
-        ch.Th = ch.Th';
+        ch.Th = ch.Th'*CTRL_DEG2RAD;
     end
 
     if length(ch.Th)~=ch.numLinks
-        disp('ERROR! The home configuration has less links that the needed number!');
-        disp('Setting home to default');
+        warning('The home configuration has less links that the needed number!');
+        warning('Setting home to default');
         ch.Th = (ch.DH(:,end)+ch.DH(:,end-1))/2;
         ch.Th = ch.Th';
     end
